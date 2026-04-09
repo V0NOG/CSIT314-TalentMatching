@@ -24,6 +24,7 @@ import EmployerProfile from "./pages/employer/EmployerProfile";
 import EmployerJobs from "./pages/employer/EmployerJobs";
 import CreateJob from "./pages/employer/CreateJob";
 import BrowseCandidates from "./pages/employer/BrowseCandidates";
+import EmployerCandidateRecommendations from "./pages/employer/CandidateRecommendations";
 
 // User profile (generic)
 import UserProfiles from "./pages/UserProfiles";
@@ -74,6 +75,9 @@ export default function App() {
           } />
           <Route path="/candidates" element={
             <ProtectedRoute role="employer"><BrowseCandidates /></ProtectedRoute>
+          } />
+          <Route path="/employer/recommendations" element={
+            <ProtectedRoute role="employer"><EmployerCandidateRecommendations /></ProtectedRoute>
           } />
         </Route>
 
