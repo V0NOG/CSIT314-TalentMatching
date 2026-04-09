@@ -30,8 +30,8 @@ const candidateNavItems: NavItem[] = [
 
 // Items shown to employers
 const employerNavItems: NavItem[] = [
-  { icon: <GridIcon />,       name: "Dashboard",           path: "/" },
-  { icon: <UserCircleIcon />, name: "Company Profile",     path: "/employer/profile" },
+  { icon: <GridIcon />,       name: "Dashboard",              path: "/" },
+  { icon: <UserCircleIcon />, name: "Company Profile",        path: "/employer/profile" },
   {
     icon: <PageIcon />,
     name: "Job Postings",
@@ -40,7 +40,8 @@ const employerNavItems: NavItem[] = [
       { name: "Post a Job",    path: "/employer/jobs/new" },
     ],
   },
-  { icon: <ListIcon />,       name: "Browse Candidates",   path: "/candidates" },
+  { icon: <ListIcon />,       name: "Browse Candidates",      path: "/candidates" },
+  { icon: <PieChartIcon />,   name: "AI Recommendations",     path: "/employer/recommendations" },
 ];
 
 const AppSidebar: React.FC = () => {

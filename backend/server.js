@@ -11,6 +11,7 @@ import candidateRoutes from "./routes/candidate.js";
 import employerRoutes  from "./routes/employer.js";
 import jobRoutes             from "./routes/jobs.js";
 import recommendationRoutes  from "./routes/recommendations.js";
+import candidatesRoutes      from "./routes/candidates.js";
 
 // --- Fail fast if critical environment variables are missing ---
 const REQUIRED_ENV = ["MONGO_URI", "JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"];
@@ -50,6 +51,7 @@ app.use("/api/candidate", candidateRoutes);
 app.use("/api/employer",  employerRoutes);
 app.use("/api/jobs",            jobRoutes);
 app.use("/api/recommendations", recommendationRoutes);
+app.use("/api/candidates",      candidatesRoutes);
 
 // --- 404 handler (must come after all routes) ---
 app.use((_req, res) => {

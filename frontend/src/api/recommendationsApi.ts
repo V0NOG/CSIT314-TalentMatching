@@ -15,6 +15,7 @@ export interface JobRecommendation {
   createdAt: string;
   updatedAt: string;
   matchScore: number;
+  matchReasons: string[];
 }
 
 export interface CandidateRecommendation {
@@ -32,6 +33,7 @@ export interface CandidateRecommendation {
   createdAt: string;
   updatedAt: string;
   matchScore: number;
+  matchReasons: string[];
 }
 
 /**

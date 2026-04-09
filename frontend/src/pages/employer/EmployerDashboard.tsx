@@ -1,10 +1,41 @@
 // frontend/src/pages/employer/EmployerDashboard.tsx
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import PageMeta from "../../components/common/PageMeta";
+import { getMyJobs } from "../../api/jobsApi";
+import { getAllCandidates } from "../../api/candidateApi";
+import { getMyEmployerProfile } from "../../api/employerApi";
 
 export default function EmployerDashboard() {
   const { user } = useAuth();
+
+  // null = loading, string = ready
+  const [activeJobs,    setActiveJobs]    = useState<string | null>(null);
+  const [candidateCount, setCandidateCount] = useState<string | null>(null);
+  const [profileStat,   setProfileStat]   = useState<string | null>(null);
+
+  useEffect(() => {
+    // Active job count
+    getMyJobs()
+      .then((jobs) => {
+        const active = jobs.filter((j) => j.status === "active").length;
+        setActiveJobs(String(active));
+      })
+      .catch(() => setActiveJobs("—"));
+
+    // Total registered candidates in the platform
+    getAllCandidates()
+      .then((candidates) => setCandidateCount(String(candidates.length)))
+      .catch(() => setCandidateCount("—"));
+
+    // Company profile status
+    getMyEmployerProfile()
+      .then(() => setProfileStat("Complete"))
+      .catch((err) => {
+        setProfileStat(err?.response?.status === 404 ? "Not set up" : "—");
+      });
+  }, []);
 
   return (
     <>
@@ -19,11 +50,26 @@ export default function EmployerDashboard() {
         </p>
       </div>
 
-      {/* Quick stats */}
+      {/* Live stats */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 mb-6">
-        <StatCard title="Active Job Postings" value="—" hint="Your currently published jobs" href="/employer/jobs" />
-        <StatCard title="Total Candidates" value="—" hint="Candidates in the platform" href="/candidates" />
-        <StatCard title="Company Profile" value="—" hint="Keep your company info up to date" href="/employer/profile" />
+        <StatCard
+          title="Active Job Postings"
+          value={activeJobs}
+          hint="Your currently published listings"
+          href="/employer/jobs"
+        />
+        <StatCard
+          title="Registered Candidates"
+          value={candidateCount}
+          hint="Candidates with profiles on the platform"
+          href="/candidates"
+        />
+        <StatCard
+          title="Company Profile"
+          value={profileStat}
+          hint="Keep your company info current"
+          href="/employer/profile"
+        />
       </div>
 
       {/* Quick actions */}
@@ -37,19 +83,19 @@ export default function EmployerDashboard() {
             cta="Create Job Posting"
           />
           <QuickAction
-            title="Manage Job Postings"
-            description="View, edit, or delete your existing job listings."
-            href="/employer/jobs"
-            cta="View Postings"
+            title="AI Candidate Recommendations"
+            description="Select one of your job postings to see the top matched candidates ranked by fit."
+            href="/employer/recommendations"
+            cta="Find Candidates"
           />
           <QuickAction
-            title="Browse Candidates"
-            description="Search and filter the candidate pool by skill, education, or experience."
+            title="Browse All Candidates"
+            description="View all registered candidates and their education and experience details."
             href="/candidates"
             cta="Browse Candidates"
           />
           <QuickAction
-            title="Update Company Profile"
+            title="Company Profile"
             description="Keep your company information current to attract better candidates."
             href="/employer/profile"
             cta="Edit Profile"
@@ -60,20 +106,42 @@ export default function EmployerDashboard() {
   );
 }
 
-function StatCard({ title, value, hint, href }: { title: string; value: string; hint: string; href: string }) {
+function StatCard({
+  title,
+  value,
+  hint,
+  href,
+}: {
+  title: string;
+  value: string | null;
+  hint: string;
+  href: string;
+}) {
   return (
     <Link
       to={href}
       className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 hover:shadow-md transition-shadow"
     >
       <p className="text-sm text-gray-500 dark:text-gray-400">{title}</p>
-      <p className="mt-1 text-3xl font-bold text-gray-800 dark:text-white/90">{value}</p>
+      <p className="mt-1 text-3xl font-bold text-gray-800 dark:text-white/90">
+        {value === null ? <span className="text-gray-300 dark:text-gray-700">…</span> : value}
+      </p>
       <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{hint}</p>
     </Link>
   );
 }
 
-function QuickAction({ title, description, href, cta }: { title: string; description: string; href: string; cta: string }) {
+function QuickAction({
+  title,
+  description,
+  href,
+  cta,
+}: {
+  title: string;
+  description: string;
+  href: string;
+  cta: string;
+}) {
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-800/50">
       <h3 className="font-medium text-gray-800 dark:text-white/90 mb-1">{title}</h3>

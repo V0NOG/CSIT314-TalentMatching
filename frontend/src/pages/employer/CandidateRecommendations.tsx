@@ -1,15 +1,18 @@
 // frontend/src/pages/employer/CandidateRecommendations.tsx
 import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import PageMeta from "../../components/common/PageMeta";
 import { getMyJobs, type Job } from "../../api/jobsApi";
 import { getCandidateRecommendationsForJob, type CandidateRecommendation } from "../../api/recommendationsApi";
 
 export default function EmployerCandidateRecommendations() {
+  const [searchParams] = useSearchParams();
+
   const [jobs, setJobs] = useState<Job[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
 
-  const [selectedJobId, setSelectedJobId] = useState("");
+  const [selectedJobId, setSelectedJobId] = useState(() => searchParams.get("jobId") || "");
   const [candidates, setCandidates] = useState<CandidateRecommendation[]>([]);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [candidatesError, setCandidatesError] = useState<string | null>(null);
@@ -23,9 +26,14 @@ export default function EmployerCandidateRecommendations() {
       .finally(() => setJobsLoading(false));
   }, []);
 
-  // Fetch candidates whenever selected job changes
+  // Fetch (or clear) candidates whenever selected job changes
   useEffect(() => {
-    if (!selectedJobId) return;
+    if (!selectedJobId) {
+      setCandidates([]);
+      setCandidatesError(null);
+      setHasFetched(false);
+      return;
+    }
 
     setCandidatesLoading(true);
     setCandidatesError(null);
@@ -54,7 +62,20 @@ export default function EmployerCandidateRecommendations() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Candidate Recommendations</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Select a job posting to see your top matching candidates.
+          Select a job posting to find the top matching candidates.
+        </p>
+      </div>
+
+      {/* Scoring explanation */}
+      <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-900/10 px-5 py-4">
+        <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">How recommendations work</p>
+        <p className="text-xs text-blue-600 dark:text-blue-400">
+          Candidates are scored out of 4 based on how well their profile matches the job across four criteria:
+          <span className="font-medium"> field of study</span>,
+          <span className="font-medium"> education level</span>,
+          <span className="font-medium"> years of experience</span>, and
+          <span className="font-medium"> skills</span>.
+          Top 10 matches are returned, sorted by score.
         </p>
       </div>
 
@@ -62,10 +83,13 @@ export default function EmployerCandidateRecommendations() {
       <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 mb-6">
         <label
           htmlFor="job-select"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+          className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
         >
-          Job Posting
+          Select Job Posting
         </label>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">
+          Choosing a job loads the top matching candidates automatically.
+        </p>
 
         {jobsLoading && (
           <p className="text-sm text-gray-400 dark:text-gray-500">Loading your jobs…</p>
@@ -78,7 +102,10 @@ export default function EmployerCandidateRecommendations() {
         {!jobsLoading && !jobsError && jobs.length === 0 && (
           <p className="text-sm text-gray-400 dark:text-gray-500">
             You have no job postings yet.{" "}
-            <a href="/employer/jobs/new" className="text-brand-500 hover:underline">Create one</a>.
+            <Link to="/employer/jobs/new" className="text-brand-500 hover:underline">
+              Create one first
+            </Link>
+            .
           </p>
         )}
 
@@ -105,23 +132,32 @@ export default function EmployerCandidateRecommendations() {
       )}
 
       {candidatesError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 p-4 text-sm text-red-600 dark:text-red-400 mb-4">
+        <div className="rounded-xl border border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400 mb-4">
           {candidatesError}
         </div>
       )}
 
       {hasFetched && !candidatesLoading && !candidatesError && candidates.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center text-gray-400 dark:text-gray-600">
-          No matching candidates found for <strong>{selectedJob?.title}</strong>.
+        <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-12 text-center">
+          <p className="text-gray-600 dark:text-gray-400 font-medium mb-1">No matching candidates found</p>
+          <p className="text-sm text-gray-500 dark:text-gray-500">
+            No candidate profiles matched the requirements for{" "}
+            <strong className="text-gray-700 dark:text-gray-200">{selectedJob?.title}</strong>.
+            More candidates will appear as they complete their profiles.
+          </p>
         </div>
       )}
 
       {!candidatesLoading && candidates.length > 0 && (
         <>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            {candidates.length} candidate{candidates.length !== 1 ? "s" : ""} matched for{" "}
-            <span className="font-medium text-gray-700 dark:text-gray-200">{selectedJob?.title}</span>
-          </p>
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="font-semibold text-gray-700 dark:text-gray-200">{candidates.length}</span>{" "}
+              candidate{candidates.length !== 1 ? "s" : ""} matched for{" "}
+              <span className="font-medium text-gray-700 dark:text-gray-200">{selectedJob?.title}</span>
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Sorted by best match</p>
+          </div>
           <div className="flex flex-col gap-4">
             {candidates.map((candidate) => (
               <CandidateCard key={candidate._id} candidate={candidate} />
@@ -148,11 +184,31 @@ function CandidateCard({ candidate }: { candidate: CandidateRecommendation }) {
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-        <Detail label="Experience" value={`${candidate.yearsOfExperience} yr${candidate.yearsOfExperience !== 1 ? "s" : ""}`} />
+        <Detail
+          label="Experience"
+          value={`${candidate.yearsOfExperience} yr${candidate.yearsOfExperience !== 1 ? "s" : ""}`}
+        />
         <Detail label="Education" value={eduLabel} />
         {edu.institution && <Detail label="Institution" value={edu.institution} />}
         {edu.graduationYear && <Detail label="Graduated" value={String(edu.graduationYear)} />}
       </div>
+
+      {/* Why this matched */}
+      {candidate.matchReasons && candidate.matchReasons.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Why this matched</p>
+          <div className="flex flex-wrap gap-1">
+            {candidate.matchReasons.map((reason) => (
+              <span
+                key={reason}
+                className="inline-flex items-center rounded-md bg-green-50 dark:bg-green-900/20 px-2 py-0.5 text-xs text-green-700 dark:text-green-400"
+              >
+                ✓ {reason}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -160,7 +216,7 @@ function CandidateCard({ candidate }: { candidate: CandidateRecommendation }) {
 function MatchBadge({ score }: { score: number }) {
   const pct = Math.round((score / 4) * 100);
   const colour =
-    score === 4
+    score >= 3
       ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
       : score >= 2
       ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"

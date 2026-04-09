@@ -17,4 +17,61 @@ client.interceptors.request.use((config) => {
   return config;
 });
 
+// On 401 — attempt a single silent token refresh, then replay the original request.
+// If the refresh call itself fails (refresh token expired), clear storage and redirect to /signin.
+// Multiple concurrent 401s are queued and resolved together once refresh completes.
+let refreshing = false;
+let queue: Array<(token: string | null) => void> = [];
+
+const flushQueue = (token: string | null) => {
+  queue.forEach((cb) => cb(token));
+  queue = [];
+};
+
+client.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const original = error.config;
+
+    // Skip: not a 401, already retried, or this IS the refresh call
+    if (
+      error.response?.status !== 401 ||
+      original._retry ||
+      original.url?.endsWith("/api/auth/refresh")
+    ) {
+      return Promise.reject(error);
+    }
+
+    // Queue concurrent requests while a refresh is in progress
+    if (refreshing) {
+      return new Promise((resolve, reject) => {
+        queue.push((token) => {
+          if (!token) return reject(error);
+          original.headers.Authorization = `Bearer ${token}`;
+          resolve(client(original));
+        });
+      });
+    }
+
+    original._retry = true;
+    refreshing = true;
+
+    try {
+      const { data } = await client.post<{ token: string }>("/api/auth/refresh");
+      const newToken = data.token;
+      localStorage.setItem("token", newToken);
+      flushQueue(newToken);
+      original.headers.Authorization = `Bearer ${newToken}`;
+      return client(original);
+    } catch {
+      flushQueue(null);
+      localStorage.removeItem("token");
+      window.location.href = "/signin";
+      return Promise.reject(error);
+    } finally {
+      refreshing = false;
+    }
+  }
+);
+
 export default client;

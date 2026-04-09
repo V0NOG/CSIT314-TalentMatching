@@ -23,3 +23,9 @@ export const getAllJobs = (): Promise<Job[]> =>
 /** GET /api/jobs/mine — jobs posted by the authenticated employer */
 export const getMyJobs = (): Promise<Job[]> =>
   client.get<Job[]>("/api/jobs/mine").then((res) => res.data);
+
+/** GET /api/jobs/search?keyword= — search jobs by keyword in description */
+export const searchJobs = (keyword: string): Promise<Job[]> =>
+  client
+    .get<Job[]>(`/api/jobs/search?keyword=${encodeURIComponent(keyword)}`)
+    .then((res) => res.data);
