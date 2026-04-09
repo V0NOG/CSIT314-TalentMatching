@@ -5,10 +5,9 @@ import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
-import axios from "axios";
 import Alert from "../ui/alert/Alert";
+import { registerRequest } from "../../api/authApi";
 
-const API = "http://localhost:5050";
 type Role = "candidate" | "employer";
 
 export default function SignUpForm() {
@@ -34,7 +33,7 @@ export default function SignUpForm() {
     setLoading(true);
     setAlert(null);
     try {
-      await axios.post(`${API}/api/auth/register`, formData, { withCredentials: true });
+      await registerRequest(formData);
       navigate("/signin", { replace: true });
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string } } };

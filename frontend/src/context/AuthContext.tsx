@@ -1,21 +1,13 @@
 // frontend/src/context/AuthContext.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import axios from "axios";
-
-const API = "http://localhost:5050";
-
-interface AuthUser {
-  id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  role: "candidate" | "employer";
-  createdAt: string;
-}
+import { logoutRequest } from "../api/authApi";
+import { getMe } from "../api/userApi";
+import type { AuthUser } from "../api/authApi";
 
 interface AuthContextValue {
   user: AuthUser | null;
   token: string;
+  isLoading: boolean;
   login: (token: string, user: AuthUser) => void;
   logout: () => void;
   isCandidate: boolean;
@@ -25,35 +17,40 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser]   = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string>(() => localStorage.getItem("token") || "");
+  const [user, setUser]       = useState<AuthUser | null>(null);
+  const [token, setToken]     = useState<string>(() => localStorage.getItem("token") || "");
+  // Start loading only if a token exists — we need to verify it against the server.
+  const [isLoading, setIsLoading] = useState<boolean>(() => !!localStorage.getItem("token"));
 
   useEffect(() => {
-    if (!token) return;
-    axios
-      .get(`${API}/api/user/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setUser(res.data))
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+    getMe()
+      .then((data) => setUser(data))
       .catch((err) => {
         console.warn("Auth /me failed", err?.response?.status);
         localStorage.removeItem("token");
         setToken("");
         setUser(null);
-      });
+      })
+      .finally(() => setIsLoading(false));
   }, [token]);
 
   const login = (newToken: string, newUser: AuthUser) => {
     localStorage.setItem("token", newToken);
     setToken(newToken);
     setUser(newUser || null);
+    setIsLoading(false);
   };
 
   const logout = () => {
-    axios.post(`${API}/api/auth/logout`, {}, { withCredentials: true }).catch(() => {});
+    logoutRequest().catch(() => {});
     localStorage.removeItem("token");
     setToken("");
     setUser(null);
+    setIsLoading(false);
   };
 
   return (
@@ -61,6 +58,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       value={{
         user,
         token,
+        isLoading,
         login,
         logout,
         isCandidate: user?.role === "candidate",
@@ -77,3 +75,5 @@ export const useAuth = () => {
   if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
   return ctx;
 };
+
+export type { AuthUser };

@@ -1,18 +1,10 @@
 // frontend/src/api/userApi.ts
-import axios from "axios";
-const API_URL = "http://localhost:5050/api/user";
+import client from "./client";
+import type { AuthUser } from "./authApi";
 
-function authHeader() {
-  const token = localStorage.getItem("token") || "";
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
+export const getMe = (): Promise<AuthUser> =>
+  client.get<AuthUser>("/api/user/me").then((res) => res.data);
 
-export const getUserProfile = async () => {
-  const res = await axios.get(`${API_URL}/me`, { headers: authHeader() });
-  return res.data;
-};
-
-export const updateUserProfile = async (userData: any) => {
-  const res = await axios.put(`${API_URL}/me`, userData, { headers: authHeader() });
-  return res.data;
-};
+// PATCH /api/user/me — endpoint will be wired in Phase 2
+export const updateMe = (data: Record<string, unknown>) =>
+  client.patch("/api/user/me", data).then((res) => res.data);

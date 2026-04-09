@@ -3,6 +3,14 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
+import {
+  ACCESS_SECRET,
+  REFRESH_SECRET,
+  ACCESS_TTL,
+  REFRESH_TTL,
+  ensureSecrets,
+  COOKIE_OPTS,
+} from "../config/jwt.js";
 
 // ---------- Validation schemas ----------
 const RegisterSchema = z.object({
@@ -21,27 +29,8 @@ const LoginSchema = z.object({
 });
 
 // ---------- JWT helpers ----------
-const ACCESS_SECRET  = () => (process.env.JWT_ACCESS_SECRET  || process.env.JWT_SECRET || "").trim();
-const REFRESH_SECRET = () => (process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "").trim();
-const ACCESS_TTL     = process.env.ACCESS_TOKEN_TTL  || "55m";
-const REFRESH_TTL    = process.env.REFRESH_TOKEN_TTL || "7d";
-
-function ensureSecrets() {
-  if (!ACCESS_SECRET() || !REFRESH_SECRET()) {
-    throw Object.assign(new Error("Server misconfiguration: JWT secret(s) missing"), { code: "NO_JWT_SECRET" });
-  }
-}
-
 const signAccess  = (payload) => jwt.sign(payload, ACCESS_SECRET(),  { expiresIn: ACCESS_TTL });
 const signRefresh = (payload) => jwt.sign(payload, REFRESH_SECRET(), { expiresIn: REFRESH_TTL });
-
-const COOKIE_OPTS = () => ({
-  httpOnly: true,
-  sameSite: "strict",
-  secure: process.env.COOKIE_SECURE === "true",
-  domain: process.env.COOKIE_DOMAIN || "localhost",
-  path: "/",
-});
 
 const setAuthCookies = (res, accessToken, refreshToken) => {
   const base = COOKIE_OPTS();
@@ -177,10 +166,14 @@ export const logoutAll = async (req, res) => {
   const userId = req.user?.id;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const user = await User.findById(userId).select("_id tokenVersion");
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $inc: { tokenVersion: 1 } },
+    { new: true }
+  ).select("_id");
+
   if (!user) return res.status(404).json({ error: "User not found" });
 
-  await User.findByIdAndUpdate(userId, { $inc: { tokenVersion: 1 } });
   clearAuthCookies(res);
   return res.json({ message: "Logged out of all devices" });
 };

@@ -7,9 +7,7 @@ import Input from "../form/input/InputField";
 import Checkbox from "../form/input/Checkbox";
 import Alert from "../ui/alert/Alert";
 import { useAuth } from "../../context/AuthContext";
-import axios from "axios";
-
-const API = "http://localhost:5050";
+import { loginRequest } from "../../api/authApi";
 
 export default function SignInForm() {
   const { login } = useAuth();
@@ -36,13 +34,8 @@ export default function SignInForm() {
     setAlert(null);
 
     try {
-      const res = await axios.post(`${API}/api/auth/login`, formData, {
-        withCredentials: true,
-        headers: { "Content-Type": "application/json" },
-      });
-
-      const { token, user } = res.data || {};
-      if (token) localStorage.setItem("token", token);
+      const res = await loginRequest(formData.email, formData.password);
+      const { token, user } = res.data;
       login(token, user);
 
       if (rememberEmail) localStorage.setItem("savedEmail", formData.email);

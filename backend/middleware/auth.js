@@ -1,5 +1,6 @@
 // backend/middleware/auth.js
 import jwt from "jsonwebtoken";
+import { ACCESS_SECRET } from "../config/jwt.js";
 
 /**
  * verifyToken — extracts and validates the access JWT.
@@ -19,14 +20,14 @@ export const verifyToken = (req, res, next) => {
     return res.status(401).json({ message: "Access denied. No token provided." });
   }
 
-  const ACCESS_SECRET = (process.env.JWT_ACCESS_SECRET || process.env.JWT_SECRET || "").trim();
-  if (!ACCESS_SECRET) {
+  const secret = ACCESS_SECRET();
+  if (!secret) {
     console.error("[auth] Missing JWT_ACCESS_SECRET");
     return res.status(500).json({ message: "Server misconfiguration" });
   }
 
   try {
-    const payload = jwt.verify(token, ACCESS_SECRET);
+    const payload = jwt.verify(token, secret);
     req.user = {
       id:   payload.sub || payload.id,
       role: payload.role,

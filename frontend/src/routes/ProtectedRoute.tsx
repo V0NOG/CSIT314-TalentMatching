@@ -4,16 +4,19 @@ import { useAuth } from "../context/AuthContext";
 
 interface Props {
   children: React.ReactNode;
-  /** If provided, only users with this role can access. Others are redirected. */
+  /** If provided, only users with this role can access. Others are redirected to home. */
   role?: "candidate" | "employer";
 }
 
 export default function ProtectedRoute({ children, role }: Props) {
-  const { token, user } = useAuth();
+  const { token, user, isLoading } = useAuth();
+
+  // Block rendering until the initial /me verification completes.
+  // Without this, role guards are skipped while user is null during page load.
+  if (isLoading) return null;
 
   if (!token) return <Navigate to="/signin" replace />;
 
-  // If a specific role is required and the user's role doesn't match, redirect to home
   if (role && user && user.role !== role) {
     return <Navigate to="/" replace />;
   }
