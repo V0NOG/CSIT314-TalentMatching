@@ -14,7 +14,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               <Link to="/" className="block mb-4">
                 <img width={231} height={48} src="/images/logo/logo.svg" alt="Logo" />
               </Link>
-              <p className="text-center text-gray-400 dark:text-white/60">CSIT-321 | Project</p>
+              <p className="text-center text-gray-400 dark:text-white/60">CSIT-314 | Talent Matching</p>
             </div>
           </div>
         </div>

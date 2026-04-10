@@ -6,7 +6,7 @@ export default function SignIn() {
   return (
     <>
       <PageMeta
-        title="CSIT-321 | Sign In"
+        title="CSIT-314 | Sign In"
         description="Sign In Page - Access your account securely"
       />
       <AuthLayout>

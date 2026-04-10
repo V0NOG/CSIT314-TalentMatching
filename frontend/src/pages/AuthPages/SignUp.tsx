@@ -7,7 +7,7 @@ export default function SignUp() {
   return (
     <>
       <PageMeta
-        title="CSIT-321 | Sign Up"
+        title="CSIT-314 | Sign Up"
         description="Sign Up Page - Create a new account securely"
       />
       <AuthLayout>
