@@ -5,6 +5,10 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./swagger.js";
+
+
 import authRoutes      from "./routes/auth.js";
 import userRoutes      from "./routes/user.js";
 import candidateRoutes from "./routes/candidate.js";
@@ -52,6 +56,8 @@ app.use("/api/employer",  employerRoutes);
 app.use("/api/jobs",            jobRoutes);
 app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/candidates",      candidatesRoutes);
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // --- 404 handler (must come after all routes) ---
 app.use((_req, res) => {
