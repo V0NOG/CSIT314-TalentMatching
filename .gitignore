@@ -29,3 +29,4 @@ npm-debug.log*
 
 # Claude tooling (not project code)
 .claude/
+AGENTS.md
