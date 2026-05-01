@@ -250,6 +250,32 @@ POST /api/auth/register
 
 The backend creates the user in MongoDB, returns an access token, and sets HTTP-only auth cookies.
 
+## Swagger API Docs
+
+Swagger is served by the backend.
+
+Start the backend:
+
+```bash
+cd backend
+npm run dev
+```
+
+Then open:
+
+```text
+http://localhost:5050/api-docs
+```
+
+Use Swagger to inspect available API routes, request bodies, and response shapes.
+
+If Swagger does not load:
+
+- Make sure the backend is running.
+- Make sure `backend/.env` exists and has valid MongoDB/JWT values.
+- Make sure the backend terminal shows `Running on port 5050`.
+- If you changed `PORT` in `backend/.env`, replace `5050` in the Swagger URL with your configured port.
+
 ## CORS Troubleshooting
 
 If signup or login fails with a browser error like:
