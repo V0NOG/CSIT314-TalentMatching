@@ -1,6 +1,7 @@
 // frontend/src/components/jobs/ApplyModal.tsx
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { applyForJob } from "../../api/applicationsApi";
+import { getMyResume } from "../../api/resumeApi";
 
 interface Props {
   jobId: string;
@@ -13,15 +14,23 @@ interface Props {
 
 export default function ApplyModal({ jobId, jobTitle, jobLocation, jobWorkMode, onClose, onSuccess }: Props) {
   const [coverLetter, setCoverLetter] = useState("");
+  const [attachResume, setAttachResume] = useState(false);
+  const [hasResume, setHasResume] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getMyResume()
+      .then(() => { setHasResume(true); setAttachResume(true); })
+      .catch(() => setHasResume(false));
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
-      await applyForJob(jobId, coverLetter.trim() || undefined);
+      await applyForJob(jobId, coverLetter.trim() || undefined, attachResume && hasResume);
       onSuccess(jobId);
     } catch (err: unknown) {
       setError(
@@ -34,7 +43,10 @@ export default function ApplyModal({ jobId, jobTitle, jobLocation, jobWorkMode, 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 max-w-lg w-full p-6 shadow-2xl">
         <div className="flex items-start justify-between mb-5">
           <div>
@@ -45,6 +57,29 @@ export default function ApplyModal({ jobId, jobTitle, jobLocation, jobWorkMode, 
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Resume attachment */}
+          {hasResume ? (
+            <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-gray-200 dark:border-gray-700 p-3.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+              <input
+                type="checkbox"
+                checked={attachResume}
+                onChange={(e) => setAttachResume(e.target.checked)}
+                className="mt-0.5 rounded border-gray-300 dark:border-gray-600 text-brand-500 focus:ring-brand-500"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Attach my built resume</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">The employer will be able to view your saved resume.</p>
+              </div>
+            </label>
+          ) : (
+            <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-4 py-3 text-sm text-gray-400 dark:text-gray-500">
+              No resume saved yet.{" "}
+              <a href="/candidate/resume" className="text-brand-500 hover:underline">Build one</a>{" "}
+              to attach it to applications.
+            </div>
+          )}
+
+          {/* Cover letter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Cover Letter <span className="text-gray-400 font-normal">(optional)</span>
@@ -61,10 +96,18 @@ export default function ApplyModal({ jobId, jobTitle, jobLocation, jobWorkMode, 
           {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           <div className="flex gap-3 justify-end pt-1">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
               Cancel
             </button>
-            <button type="submit" disabled={submitting} className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {submitting ? "Submitting…" : "Submit Application"}
             </button>
           </div>

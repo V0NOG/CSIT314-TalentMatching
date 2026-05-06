@@ -22,12 +22,13 @@ export interface JobApplicationEntry {
   candidateProfile: CandidateProfileData | null;
   status: ApplicationStatus;
   coverLetter?: string;
+  hasResume: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export const applyForJob = (jobId: string, coverLetter?: string): Promise<MyApplication> =>
-  client.post<MyApplication>("/api/applications", { jobId, coverLetter }).then((r) => r.data);
+export const applyForJob = (jobId: string, coverLetter?: string, attachResume?: boolean): Promise<MyApplication> =>
+  client.post<MyApplication>("/api/applications", { jobId, coverLetter, attachResume }).then((r) => r.data);
 
 export const getMyApplications = (): Promise<MyApplication[]> =>
   client.get<MyApplication[]>("/api/applications/mine").then((r) => r.data);

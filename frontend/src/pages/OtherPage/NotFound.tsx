@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <>
       <PageMeta
-        title="CSIT-321 | 404 Not Found"
+        title="CSIT-314 | Talent Matching | 404 Not Found"
         description="404 Not Found Page - The page you are looking for does not exist."
       />
       <div className="relative flex flex-col items-center justify-center min-h-screen p-6 overflow-hidden z-1">
@@ -34,7 +34,7 @@ export default function NotFound() {
         </div>
         {/* <!-- Footer --> */}
         <p className="absolute text-sm text-center text-gray-500 -translate-x-1/2 bottom-6 left-1/2 dark:text-gray-400">
-          &copy; CSIT-321 | Group W26
+          &copy; CSIT-314 | Talent Matching
         </p>
       </div>
     </>

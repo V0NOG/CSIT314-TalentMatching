@@ -116,6 +116,17 @@ export default function JobApplications() {
                     </div>
                   )}
 
+                  {app.hasResume && (
+                    <div className="mt-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 dark:bg-blue-900/20 px-2.5 py-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Resume attached
+                      </span>
+                    </div>
+                  )}
+
                   {app.coverLetter && (
                     <p className="mt-3 text-sm text-gray-600 dark:text-gray-300 italic line-clamp-3">"{app.coverLetter}"</p>
                   )}

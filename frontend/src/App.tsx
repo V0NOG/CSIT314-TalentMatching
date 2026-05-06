@@ -16,6 +16,7 @@ import Home from "./pages/Dashboard/Home";
 import CandidateProfile from "./pages/candidate/CandidateProfile";
 import CandidateRecommendations from "./pages/candidate/CandidateRecommendations";
 import MyApplications from "./pages/candidate/MyApplications";
+import ResumeBuilder from "./pages/candidate/ResumeBuilder";
 
 // Shared pages
 import JobListings from "./pages/jobs/JobListings";
@@ -66,6 +67,9 @@ export default function App() {
           } />
           <Route path="/candidate/applications" element={
             <ProtectedRoute role="candidate"><MyApplications /></ProtectedRoute>
+          } />
+          <Route path="/candidate/resume" element={
+            <ProtectedRoute role="candidate"><ResumeBuilder /></ProtectedRoute>
           } />
 
           {/* Jobs — visible to both roles */}

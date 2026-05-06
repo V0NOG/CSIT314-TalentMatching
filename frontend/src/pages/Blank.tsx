@@ -5,7 +5,7 @@ export default function Blank() {
   return (
     <div>
       <PageMeta
-        title="CSIT-321 | Blank Page"
+        title="CSIT-314 | Talent Matching | Blank Page"
         description="Blank Page - A simple blank page for custom content"
       />
       <PageBreadcrumb pageTitle="Blank Page" />

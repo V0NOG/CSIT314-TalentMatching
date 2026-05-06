@@ -2,11 +2,12 @@
 import JobApplication from "../models/JobApplication.js";
 import Job from "../models/Job.js";
 import CandidateProfile from "../models/CandidateProfile.js";
+import Resume from "../models/Resume.js";
 
 /** POST /api/applications — candidate applies for a job */
 export const applyForJob = async (req, res) => {
   try {
-    const { jobId, coverLetter } = req.body;
+    const { jobId, coverLetter, attachResume } = req.body;
     if (!jobId) return res.status(400).json({ error: "jobId is required" });
 
     const job = await Job.findById(jobId);
@@ -19,6 +20,7 @@ export const applyForJob = async (req, res) => {
       job: jobId,
       applicant: req.user.id,
       coverLetter: coverLetter?.trim() || undefined,
+      resume: attachResume === true ? (await Resume.findOne({ user: req.user.id }).select("_id"))?._id || null : null,
     });
 
     return res.status(201).json(application);
@@ -64,6 +66,7 @@ export const getApplicationsForJob = async (req, res) => {
     const result = applications.map((app) => ({
       ...app.toObject(),
       candidateProfile: profileMap[app.applicant.toString()] || null,
+      hasResume: app.resume != null,
     }));
 
     return res.status(200).json(result);

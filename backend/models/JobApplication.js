@@ -7,6 +7,7 @@ const jobApplicationSchema = new mongoose.Schema(
     applicant:   { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     status:      { type: String, enum: ["pending", "reviewing", "accepted", "rejected"], default: "pending" },
     coverLetter: { type: String, trim: true },
+    resume:      { type: mongoose.Schema.Types.ObjectId, ref: "Resume", default: null },
   },
   { timestamps: true }
 );

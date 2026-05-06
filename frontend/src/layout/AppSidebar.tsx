@@ -25,6 +25,7 @@ const candidateNavItems: NavItem[] = [
   { icon: <GridIcon />,       name: "Dashboard",        path: "/" },
   { icon: <ListIcon />,       name: "Browse Jobs",      path: "/jobs" },
   { icon: <PieChartIcon />,   name: "Recommended Jobs", path: "/candidate/recommendations" },
+  { icon: <PageIcon />,       name: "Resume Builder",   path: "/candidate/resume" },
   { icon: <ListIcon />,       name: "My Applications",  path: "/candidate/applications" },
 ];
 
