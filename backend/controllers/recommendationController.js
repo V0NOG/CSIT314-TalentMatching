@@ -94,7 +94,7 @@ export const recommendCandidatesForJob = async (req, res) => {
     const [job, candidates, user] = await Promise.all([
       Job.findById(jobId).select("-__v"),
       CandidateProfile.find().select("-__v"),
-      User.findById(req.user.id).select("membership"),
+      User.findById(req.user.id).select("membership membershipExpiresAt"),
     ]);
 
     if (!job) {
@@ -104,7 +104,7 @@ export const recommendCandidatesForJob = async (req, res) => {
       return res.status(200).json([]);
     }
 
-    const isMember = user?.membership === true;
+    const isMember = user?.membership === true && (!user.membershipExpiresAt || new Date(user.membershipExpiresAt) > new Date());
 
     const scored = candidates.map((candidate) => ({
       candidate,
@@ -145,7 +145,7 @@ export const recommendJobsForCandidate = async (req, res) => {
   try {
     const [candidate, user] = await Promise.all([
       CandidateProfile.findOne({ user: req.user.id }),
-      User.findById(req.user.id).select("membership"),
+      User.findById(req.user.id).select("membership membershipExpiresAt"),
     ]);
 
     if (!candidate) {
@@ -154,7 +154,7 @@ export const recommendJobsForCandidate = async (req, res) => {
       });
     }
 
-    const isMember = user?.membership === true;
+    const isMember = user?.membership === true && (!user.membershipExpiresAt || new Date(user.membershipExpiresAt) > new Date());
 
     const jobs = await Job.find().select("-__v");
     if (jobs.length === 0) {

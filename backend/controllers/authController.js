@@ -60,6 +60,7 @@ function safeUser(user) {
     email:      user.email,
     role:       user.role,
     membership: user.membership ?? false,
+    membershipExpiresAt: user.membershipExpiresAt || null,
     createdAt:  user.createdAt,
   };
 }

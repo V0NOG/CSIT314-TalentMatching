@@ -15,6 +15,7 @@ const userSchema = new mongoose.Schema(
     },
 
     membership: { type: Boolean, default: false },
+    membershipExpiresAt: { type: Date, default: null },
 
     // Token invalidation — bump to force logout on all devices
     tokenVersion: { type: Number, default: 0 },

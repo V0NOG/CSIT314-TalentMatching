@@ -15,6 +15,7 @@ import Home from "./pages/Dashboard/Home";
 // Candidate pages
 import CandidateProfile from "./pages/candidate/CandidateProfile";
 import CandidateRecommendations from "./pages/candidate/CandidateRecommendations";
+import MyApplications from "./pages/candidate/MyApplications";
 
 // Shared pages
 import JobListings from "./pages/jobs/JobListings";
@@ -25,9 +26,13 @@ import EmployerJobs from "./pages/employer/EmployerJobs";
 import CreateJob from "./pages/employer/CreateJob";
 import BrowseCandidates from "./pages/employer/BrowseCandidates";
 import EmployerCandidateRecommendations from "./pages/employer/CandidateRecommendations";
+import JobApplications from "./pages/employer/JobApplications";
 
 // User profile (generic)
 import UserProfiles from "./pages/UserProfiles";
+
+// Membership
+import MembershipPage from "./pages/membership/MembershipPage";
 
 export default function App() {
   return (
@@ -59,6 +64,9 @@ export default function App() {
           <Route path="/candidate/recommendations" element={
             <ProtectedRoute role="candidate"><CandidateRecommendations /></ProtectedRoute>
           } />
+          <Route path="/candidate/applications" element={
+            <ProtectedRoute role="candidate"><MyApplications /></ProtectedRoute>
+          } />
 
           {/* Jobs — visible to both roles */}
           <Route path="/jobs" element={<JobListings />} />
@@ -79,6 +87,12 @@ export default function App() {
           <Route path="/employer/recommendations" element={
             <ProtectedRoute role="employer"><EmployerCandidateRecommendations /></ProtectedRoute>
           } />
+          <Route path="/employer/applications" element={
+            <ProtectedRoute role="employer"><JobApplications /></ProtectedRoute>
+          } />
+
+          {/* Membership — both roles */}
+          <Route path="/membership" element={<MembershipPage />} />
         </Route>
 
         {/* 404 */}

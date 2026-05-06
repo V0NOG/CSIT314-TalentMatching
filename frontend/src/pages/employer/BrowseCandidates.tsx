@@ -208,9 +208,22 @@ function CandidateCard({ candidate }: { candidate: CandidateProfileData }) {
   const edu = candidate.education;
   const eduLine = [edu?.degree, edu?.fieldOfStudy].filter(Boolean).join(" in ") || null;
   const skills = candidate.skills || [];
+  const [clicked, setClicked] = useState(false);
+
+  const handleClick = () => {
+    setClicked(true);
+    setTimeout(() => setClicked(false), 700);
+  };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900 flex flex-col gap-3">
+    <div
+      onClick={handleClick}
+      className={`rounded-2xl border bg-white p-5 dark:bg-gray-900 flex flex-col gap-3 cursor-pointer transition-all duration-300 ${
+        clicked
+          ? "border-brand-400 dark:border-brand-500 ring-2 ring-brand-300 dark:ring-brand-700 shadow-md"
+          : "border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm"
+      }`}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-gray-800 dark:text-white/90 truncate">{candidate.fullName}</h2>

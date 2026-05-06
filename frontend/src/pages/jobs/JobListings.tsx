@@ -2,6 +2,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { getAllJobs, searchJobs, type Job, type JobSearchParams } from "../../api/jobsApi";
+import { useAuth } from "../../context/AuthContext";
+import { getMyApplications } from "../../api/applicationsApi";
+import ApplyModal from "../../components/jobs/ApplyModal";
 
 const WORK_MODES = ["Remote", "On-site", "Hybrid"] as const;
 const STATUSES   = ["active", "draft", "closed"] as const;
@@ -11,6 +14,7 @@ function hasActiveFilters(params: JobSearchParams) {
 }
 
 export default function JobListings() {
+  const { isCandidate } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +24,10 @@ export default function JobListings() {
   const [location, setLocation] = useState("");
   const [workMode, setWorkMode] = useState("");
   const [status, setStatus]     = useState("");
-  const [fuzzy, setFuzzy]       = useState(false);
+
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [applyJobId, setApplyJobId] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -29,14 +36,20 @@ export default function JobListings() {
       .then(setJobs)
       .catch(() => setError("Failed to load job listings."))
       .finally(() => setLoading(false));
-  }, []);
+
+    if (isCandidate) {
+      getMyApplications()
+        .then((apps) => setAppliedIds(new Set(apps.map((a) => a.job._id))))
+        .catch(() => {});
+    }
+  }, [isCandidate]);
 
   const runSearch = useCallback(
     (params: JobSearchParams) => {
       setSearching(true);
       setError(null);
-      const call = hasActiveFilters(params) || params.fuzzy
-        ? searchJobs(params)
+      const call = hasActiveFilters(params)
+        ? searchJobs({ ...params, fuzzy: true })
         : getAllJobs();
       call
         .then(setJobs)
@@ -48,7 +61,7 @@ export default function JobListings() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    runSearch({ keyword: keyword.trim(), location: location.trim(), workMode, status, fuzzy });
+    runSearch({ keyword: keyword.trim(), location: location.trim(), workMode, status });
   };
 
   const handleClear = () => {
@@ -56,7 +69,6 @@ export default function JobListings() {
     setLocation("");
     setWorkMode("");
     setStatus("");
-    setFuzzy(false);
     setSearching(true);
     getAllJobs()
       .then(setJobs)
@@ -67,6 +79,8 @@ export default function JobListings() {
 
   const activeFilters = hasActiveFilters({ keyword: keyword.trim(), location: location.trim(), workMode, status });
   const busy = loading || searching;
+
+  const applyJob = jobs.find((j) => j._id === applyJobId);
 
   return (
     <>
@@ -119,13 +133,13 @@ export default function JobListings() {
             value={location}
             onChange={(e) => setLocation(e.target.value)}
             placeholder="Filter by location…"
-            className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 w-44"
+            className="h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 w-44"
           />
 
           <select
             value={workMode}
             onChange={(e) => setWorkMode(e.target.value)}
-            className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="">All work modes</option>
             {WORK_MODES.map((m) => (
@@ -136,7 +150,7 @@ export default function JobListings() {
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="h-9 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
           >
             <option value="">All statuses</option>
             {STATUSES.map((s) => (
@@ -144,17 +158,7 @@ export default function JobListings() {
             ))}
           </select>
 
-          <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={fuzzy}
-              onChange={(e) => setFuzzy(e.target.checked)}
-              className="rounded border-gray-300 dark:border-gray-700 text-brand-500 focus:ring-brand-500"
-            />
-            Fuzzy search
-          </label>
-
-          {(activeFilters || fuzzy) && (
+          {activeFilters && (
             <button
               type="button"
               onClick={handleClear}
@@ -164,12 +168,6 @@ export default function JobListings() {
             </button>
           )}
         </div>
-
-        {fuzzy && (
-          <p className="text-xs text-gray-400 dark:text-gray-500">
-            Fuzzy search is on — approximate matches and typos are handled automatically.
-          </p>
-        )}
       </form>
 
       {error && (
@@ -204,9 +202,34 @@ export default function JobListings() {
       {!busy && !error && jobs.length > 0 && (
         <div className="flex flex-col gap-4">
           {jobs.map((job) => (
-            <JobCard key={job._id} job={job} />
+            <JobCard
+              key={job._id}
+              job={job}
+              isCandidate={isCandidate}
+              isApplied={appliedIds.has(job._id)}
+              isHighlighted={highlightedId === job._id}
+              onApply={() => {
+                setHighlightedId(job._id);
+                setApplyJobId(job._id);
+                setTimeout(() => setHighlightedId(null), 900);
+              }}
+            />
           ))}
         </div>
+      )}
+
+      {applyJobId && applyJob && (
+        <ApplyModal
+          jobId={applyJobId}
+          jobTitle={applyJob.title}
+          jobLocation={applyJob.location}
+          jobWorkMode={applyJob.workMode}
+          onClose={() => setApplyJobId(null)}
+          onSuccess={(jobId) => {
+            setAppliedIds((prev) => new Set([...prev, jobId]));
+            setApplyJobId(null);
+          }}
+        />
       )}
     </>
   );
@@ -218,11 +241,27 @@ const STATUS_STYLES: Record<string, string> = {
   closed: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
 };
 
-function JobCard({ job }: { job: Job }) {
+function JobCard({
+  job,
+  isCandidate,
+  isApplied,
+  isHighlighted,
+  onApply,
+}: {
+  job: Job;
+  isCandidate: boolean;
+  isApplied: boolean;
+  isHighlighted: boolean;
+  onApply: () => void;
+}) {
   const statusStyle = STATUS_STYLES[job.status] || STATUS_STYLES.draft;
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <div className={`rounded-2xl border bg-white p-5 dark:bg-gray-900 transition-all duration-300 ${
+      isHighlighted
+        ? "border-brand-400 dark:border-brand-500 ring-2 ring-brand-300 dark:ring-brand-700 shadow-md scale-[1.005]"
+        : "border-gray-200 dark:border-gray-800"
+    }`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-semibold text-gray-800 dark:text-white/90">{job.title}</h2>
@@ -248,9 +287,25 @@ function JobCard({ job }: { job: Job }) {
         )}
       </div>
 
-      <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
-        Posted {new Date(job.createdAt).toLocaleDateString()}
-      </p>
+      <div className="mt-3 flex items-center justify-between gap-4">
+        <p className="text-xs text-gray-400 dark:text-gray-500">
+          Posted {new Date(job.createdAt).toLocaleDateString()}
+        </p>
+        {isCandidate && (
+          isApplied ? (
+            <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-full px-3 py-1">
+              Applied
+            </span>
+          ) : (
+            <button
+              onClick={onApply}
+              className="text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-lg px-4 py-1.5"
+            >
+              Apply
+            </button>
+          )
+        )}
+      </div>
     </div>
   );
 }

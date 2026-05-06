@@ -23,9 +23,9 @@ type NavItem = {
 // Items shown to candidates (job seekers)
 const candidateNavItems: NavItem[] = [
   { icon: <GridIcon />,       name: "Dashboard",        path: "/" },
-  { icon: <UserCircleIcon />, name: "My Profile",       path: "/candidate/profile" },
   { icon: <ListIcon />,       name: "Browse Jobs",      path: "/jobs" },
   { icon: <PieChartIcon />,   name: "Recommended Jobs", path: "/candidate/recommendations" },
+  { icon: <ListIcon />,       name: "My Applications",  path: "/candidate/applications" },
 ];
 
 // Items shown to employers
@@ -38,6 +38,7 @@ const employerNavItems: NavItem[] = [
     subItems: [
       { name: "All Postings",  path: "/employer/jobs" },
       { name: "Post a Job",    path: "/employer/jobs/new" },
+      { name: "Applications",  path: "/employer/applications" },
     ],
   },
   { icon: <ListIcon />,       name: "Browse Candidates",      path: "/candidates" },

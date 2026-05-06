@@ -12,25 +12,23 @@ export const getMe = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/user/membership
- * Toggles membership status for the authenticated user.
- */
 export const updateMembership = async (req, res) => {
   try {
     const { membership } = req.body;
     if (typeof membership !== "boolean") {
       return res.status(400).json({ error: "membership must be a boolean" });
     }
-
-    const user = await User.findByIdAndUpdate(
-      req.user.id,
-      { $set: { membership } },
-      { new: true }
-    ).select("-password -tokenVersion");
-
+    const updates = { membership };
+    if (membership) {
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 30);
+      updates.membershipExpiresAt = expiresAt;
+    } else {
+      updates.membershipExpiresAt = null;
+    }
+    const user = await User.findByIdAndUpdate(req.user.id, { $set: updates }, { new: true })
+      .select("-password -tokenVersion");
     if (!user) return res.status(404).json({ error: "User not found" });
-
     return res.status(200).json(user);
   } catch (err) {
     console.error("[userController.updateMembership]", err);
