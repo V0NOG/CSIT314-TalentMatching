@@ -11,3 +11,29 @@ export const getMe = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch user" });
   }
 };
+
+/**
+ * PUT /api/user/membership
+ * Toggles membership status for the authenticated user.
+ */
+export const updateMembership = async (req, res) => {
+  try {
+    const { membership } = req.body;
+    if (typeof membership !== "boolean") {
+      return res.status(400).json({ error: "membership must be a boolean" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: { membership } },
+      { new: true }
+    ).select("-password -tokenVersion");
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    return res.status(200).json(user);
+  } catch (err) {
+    console.error("[userController.updateMembership]", err);
+    return res.status(500).json({ error: "An error occurred while updating membership" });
+  }
+};

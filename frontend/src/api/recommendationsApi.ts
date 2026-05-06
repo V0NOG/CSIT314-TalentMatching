@@ -1,5 +1,6 @@
 // frontend/src/api/recommendationsApi.ts
 import client from "./client";
+import type { WorkExperienceEntry } from "./candidateApi";
 
 export interface JobRecommendation {
   _id: string;
@@ -30,6 +31,10 @@ export interface CandidateRecommendation {
     graduationYear?: number;
   };
   yearsOfExperience: number;
+  skills: string[];
+  workExperience: WorkExperienceEntry[];
+  preferredWorkingMode: "Remote" | "On-site" | "Hybrid" | "";
+  preferredLocation: string;
   createdAt: string;
   updatedAt: string;
   matchScore: number;
@@ -38,16 +43,16 @@ export interface CandidateRecommendation {
 
 /**
  * GET /api/recommendations
- * Returns top-K jobs ranked by relevance to the authenticated candidate.
- * Requires candidate role.
+ * Returns jobs ranked by relevance to the authenticated candidate.
+ * Members get unlimited results; non-members get top 10.
  */
 export const getCandidateRecommendations = (): Promise<JobRecommendation[]> =>
   client.get<JobRecommendation[]>("/api/recommendations").then((res) => res.data);
 
 /**
  * GET /api/recommendations/candidates/:jobId
- * Returns top-N candidates ranked by relevance to the given job.
- * Requires employer role.
+ * Returns candidates ranked by relevance to the given job.
+ * Members get unlimited results; non-members get top 10.
  */
 export const getCandidateRecommendationsForJob = (jobId: string): Promise<CandidateRecommendation[]> =>
   client

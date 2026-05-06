@@ -1,14 +1,27 @@
 // frontend/src/pages/jobs/JobListings.tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import PageMeta from "../../components/common/PageMeta";
-import { getAllJobs, searchJobs, type Job } from "../../api/jobsApi";
+import { getAllJobs, searchJobs, type Job, type JobSearchParams } from "../../api/jobsApi";
+
+const WORK_MODES = ["Remote", "On-site", "Hybrid"] as const;
+const STATUSES   = ["active", "draft", "closed"] as const;
+
+function hasActiveFilters(params: JobSearchParams) {
+  return !!(params.keyword || params.location || params.workMode || params.status);
+}
 
 export default function JobListings() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [keyword, setKeyword] = useState("");
   const [searching, setSearching] = useState(false);
+
+  const [keyword, setKeyword]   = useState("");
+  const [location, setLocation] = useState("");
+  const [workMode, setWorkMode] = useState("");
+  const [status, setStatus]     = useState("");
+  const [fuzzy, setFuzzy]       = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -18,28 +31,32 @@ export default function JobListings() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = keyword.trim();
-    if (!q) {
-      // Reset to all jobs
+  const runSearch = useCallback(
+    (params: JobSearchParams) => {
       setSearching(true);
-      getAllJobs()
+      setError(null);
+      const call = hasActiveFilters(params) || params.fuzzy
+        ? searchJobs(params)
+        : getAllJobs();
+      call
         .then(setJobs)
-        .catch(() => setError("Failed to load jobs."))
+        .catch(() => setError("Search failed. Please try again."))
         .finally(() => setSearching(false));
-      return;
-    }
-    setSearching(true);
-    setError(null);
-    searchJobs(q)
-      .then(setJobs)
-      .catch(() => setError("Search failed. Please try again."))
-      .finally(() => setSearching(false));
+    },
+    []
+  );
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    runSearch({ keyword: keyword.trim(), location: location.trim(), workMode, status, fuzzy });
   };
 
   const handleClear = () => {
     setKeyword("");
+    setLocation("");
+    setWorkMode("");
+    setStatus("");
+    setFuzzy(false);
     setSearching(true);
     getAllJobs()
       .then(setJobs)
@@ -48,6 +65,7 @@ export default function JobListings() {
     inputRef.current?.focus();
   };
 
+  const activeFilters = hasActiveFilters({ keyword: keyword.trim(), location: location.trim(), workMode, status });
   const busy = loading || searching;
 
   return (
@@ -61,35 +79,97 @@ export default function JobListings() {
         </p>
       </div>
 
-      {/* Search */}
-      <form onSubmit={handleSearch} className="mb-6 flex gap-2">
-        <div className="relative flex-1">
+      {/* Search + Filters */}
+      <form onSubmit={handleSearch} className="mb-6 space-y-3">
+        {/* Keyword row */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <input
+              ref={inputRef}
+              type="text"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="Search jobs by keyword…"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            {keyword && (
+              <button
+                type="button"
+                onClick={() => setKeyword("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none"
+                aria-label="Clear keyword"
+              >
+                ×
+              </button>
+            )}
+          </div>
+          <button
+            type="submit"
+            disabled={busy}
+            className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50 shrink-0"
+          >
+            Search
+          </button>
+        </div>
+
+        {/* Filter row */}
+        <div className="flex flex-wrap gap-2 items-center">
           <input
-            ref={inputRef}
             type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="Search by keyword in job description…"
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="Filter by location…"
+            className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 w-44"
           />
-          {keyword && (
+
+          <select
+            value={workMode}
+            onChange={(e) => setWorkMode(e.target.value)}
+            className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+          >
+            <option value="">All work modes</option>
+            {WORK_MODES.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+          >
+            <option value="">All statuses</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s} className="capitalize">{s}</option>
+            ))}
+          </select>
+
+          <label className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={fuzzy}
+              onChange={(e) => setFuzzy(e.target.checked)}
+              className="rounded border-gray-300 dark:border-gray-700 text-brand-500 focus:ring-brand-500"
+            />
+            Fuzzy search
+          </label>
+
+          {(activeFilters || fuzzy) && (
             <button
               type="button"
               onClick={handleClear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none"
-              aria-label="Clear search"
+              className="text-sm font-medium text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 underline"
             >
-              ×
+              Clear all
             </button>
           )}
         </div>
-        <button
-          type="submit"
-          disabled={busy}
-          className="px-4 py-2 text-sm font-medium text-white bg-brand-500 rounded-lg hover:bg-brand-600 disabled:opacity-50"
-        >
-          Search
-        </button>
+
+        {fuzzy && (
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Fuzzy search is on — approximate matches and typos are handled automatically.
+          </p>
+        )}
       </form>
 
       {error && (
@@ -105,15 +185,17 @@ export default function JobListings() {
       {!busy && !error && jobs.length === 0 && (
         <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-12 text-center">
           <p className="text-gray-500 dark:text-gray-400">
-            {keyword.trim() ? `No jobs matched "${keyword.trim()}".` : "No job postings available yet."}
+            {activeFilters
+              ? "No jobs matched your search and filters."
+              : "No job postings available yet."}
           </p>
-          {keyword.trim() && (
+          {activeFilters && (
             <button
               type="button"
               onClick={handleClear}
               className="mt-3 text-sm font-medium text-brand-500 hover:text-brand-600"
             >
-              Clear search
+              Clear filters
             </button>
           )}
         </div>

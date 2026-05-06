@@ -2,11 +2,16 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import PageMeta from "../../components/common/PageMeta";
+import { useAuth } from "../../context/AuthContext";
 import { getMyJobs, type Job } from "../../api/jobsApi";
 import { getCandidateRecommendationsForJob, type CandidateRecommendation } from "../../api/recommendationsApi";
 
+const MAX_SCORE = 6;
+
 export default function EmployerCandidateRecommendations() {
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const isMember = user?.membership === true;
 
   const [jobs, setJobs] = useState<Job[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
@@ -18,7 +23,6 @@ export default function EmployerCandidateRecommendations() {
   const [candidatesError, setCandidatesError] = useState<string | null>(null);
   const [hasFetched, setHasFetched] = useState(false);
 
-  // Load employer's jobs on mount for the dropdown
   useEffect(() => {
     getMyJobs()
       .then(setJobs)
@@ -26,7 +30,6 @@ export default function EmployerCandidateRecommendations() {
       .finally(() => setJobsLoading(false));
   }, []);
 
-  // Fetch (or clear) candidates whenever selected job changes
   useEffect(() => {
     if (!selectedJobId) {
       setCandidates([]);
@@ -66,16 +69,39 @@ export default function EmployerCandidateRecommendations() {
         </p>
       </div>
 
+      {/* Membership status banner */}
+      <div className={`mb-6 rounded-xl border px-5 py-3 flex items-center justify-between gap-4 ${
+        isMember
+          ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800/50 dark:bg-yellow-900/10"
+          : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/40"
+      }`}>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          {isMember
+            ? "Premium member — showing all matching candidates with no limit."
+            : "Free plan — showing top 10 matches per job. Upgrade to Premium for unlimited results."}
+        </p>
+        {!isMember && (
+          <Link
+            to="/employer/profile"
+            className="shrink-0 text-xs font-medium text-brand-500 hover:text-brand-600"
+          >
+            Upgrade →
+          </Link>
+        )}
+      </div>
+
       {/* Scoring explanation */}
       <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-900/10 px-5 py-4">
         <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">How recommendations work</p>
         <p className="text-xs text-blue-600 dark:text-blue-400">
-          Candidates are scored out of 4 based on how well their profile matches the job across four criteria:
+          Candidates are scored out of {MAX_SCORE} based on how well their profile matches the job across six criteria:
           <span className="font-medium"> field of study</span>,
           <span className="font-medium"> education level</span>,
-          <span className="font-medium"> years of experience</span>, and
-          <span className="font-medium"> skills</span>.
-          Top 10 matches are returned, sorted by score.
+          <span className="font-medium"> years of experience</span>,
+          <span className="font-medium"> skills</span>,
+          <span className="font-medium"> work mode preference</span>, and
+          <span className="font-medium"> location preference</span>.
+          {isMember ? " All matches are returned." : " Top 10 matches are returned, sorted by score."}
         </p>
       </div>
 
@@ -172,6 +198,8 @@ export default function EmployerCandidateRecommendations() {
 function CandidateCard({ candidate }: { candidate: CandidateRecommendation }) {
   const edu = candidate.education;
   const eduLabel = [edu.degree, edu.fieldOfStudy].filter(Boolean).join(" in ") || "—";
+  const skills = candidate.skills || [];
+  const workExps = candidate.workExperience || [];
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
@@ -191,7 +219,52 @@ function CandidateCard({ candidate }: { candidate: CandidateRecommendation }) {
         <Detail label="Education" value={eduLabel} />
         {edu.institution && <Detail label="Institution" value={edu.institution} />}
         {edu.graduationYear && <Detail label="Graduated" value={String(edu.graduationYear)} />}
+        {candidate.preferredWorkingMode && (
+          <Detail label="Prefers" value={candidate.preferredWorkingMode} />
+        )}
+        {candidate.preferredLocation && (
+          <Detail label="Location pref." value={candidate.preferredLocation} />
+        )}
       </div>
+
+      {/* Skills */}
+      {skills.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1">
+          {skills.slice(0, 6).map((skill) => (
+            <span
+              key={skill}
+              className="rounded-md bg-brand-50 dark:bg-brand-900/20 px-2 py-0.5 text-xs font-medium text-brand-600 dark:text-brand-400"
+            >
+              {skill}
+            </span>
+          ))}
+          {skills.length > 6 && (
+            <span className="rounded-md bg-gray-50 dark:bg-gray-800 px-2 py-0.5 text-xs text-gray-400">
+              +{skills.length - 6} more
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Work Experience summary */}
+      {workExps.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 space-y-1">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Work Experience</p>
+          {workExps.slice(0, 2).map((exp, i) => (
+            <p key={i} className="text-xs text-gray-600 dark:text-gray-300">
+              {[exp.jobTitle, exp.company].filter(Boolean).join(" at ")}
+              {(exp.startDate || exp.endDate) && (
+                <span className="text-gray-400 dark:text-gray-500 ml-1">
+                  ({[exp.startDate, exp.endDate].filter(Boolean).join(" – ")})
+                </span>
+              )}
+            </p>
+          ))}
+          {workExps.length > 2 && (
+            <p className="text-xs text-gray-400 dark:text-gray-500">+{workExps.length - 2} more entries</p>
+          )}
+        </div>
+      )}
 
       {/* Why this matched */}
       {candidate.matchReasons && candidate.matchReasons.length > 0 && (
@@ -214,11 +287,11 @@ function CandidateCard({ candidate }: { candidate: CandidateRecommendation }) {
 }
 
 function MatchBadge({ score }: { score: number }) {
-  const pct = Math.round((score / 4) * 100);
+  const pct = Math.round((score / MAX_SCORE) * 100);
   const colour =
-    score >= 3
+    score >= 5
       ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-      : score >= 2
+      : score >= 4
       ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
       : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
 

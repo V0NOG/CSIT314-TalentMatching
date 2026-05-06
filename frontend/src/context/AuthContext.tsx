@@ -10,6 +10,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (token: string, user: AuthUser) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isCandidate: boolean;
   isEmployer: boolean;
 }
@@ -19,7 +20,6 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser]       = useState<AuthUser | null>(null);
   const [token, setToken]     = useState<string>(() => localStorage.getItem("token") || "");
-  // Start loading only if a token exists — we need to verify it against the server.
   const [isLoading, setIsLoading] = useState<boolean>(() => !!localStorage.getItem("token"));
 
   useEffect(() => {
@@ -53,6 +53,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   };
 
+  const refreshUser = async () => {
+    const data = await getMe();
+    setUser(data);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -61,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isLoading,
         login,
         logout,
+        refreshUser,
         isCandidate: user?.role === "candidate",
         isEmployer:  user?.role === "employer",
       }}

@@ -54,12 +54,13 @@ function issueTokens(user) {
 
 function safeUser(user) {
   return {
-    id:        user._id,
-    firstName: user.firstName,
-    lastName:  user.lastName,
-    email:     user.email,
-    role:      user.role,
-    createdAt: user.createdAt,
+    id:         user._id,
+    firstName:  user.firstName,
+    lastName:   user.lastName,
+    email:      user.email,
+    role:       user.role,
+    membership: user.membership ?? false,
+    createdAt:  user.createdAt,
   };
 }
 

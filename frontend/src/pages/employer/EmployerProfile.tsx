@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageMeta from "../../components/common/PageMeta";
+import { useAuth } from "../../context/AuthContext";
+import { updateMembership } from "../../api/userApi";
 import {
   getMyEmployerProfile,
   createEmployerProfile,
@@ -55,12 +57,17 @@ function profileToForm(data: EmployerProfileData): EmployerProfileInput {
 }
 
 export default function EmployerProfile() {
+  const { user, refreshUser } = useAuth();
+
   const [profile, setProfile] = useState<EmployerProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<EmployerProfileInput>(emptyForm());
+
+  const [membershipLoading, setMembershipLoading] = useState(false);
+  const [membershipMsg, setMembershipMsg] = useState<string | null>(null);
 
   useEffect(() => {
     getMyEmployerProfile()
@@ -72,13 +79,31 @@ export default function EmployerProfile() {
         if (err?.response?.status !== 404) {
           setError("Failed to load profile. Please refresh the page.");
         }
-        // 404 = no profile yet, show blank create form
       })
       .finally(() => setLoading(false));
   }, []);
 
   const set = (field: keyof EmployerProfileInput, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  const handleMembershipToggle = async () => {
+    if (!user) return;
+    setMembershipLoading(true);
+    setMembershipMsg(null);
+    try {
+      await updateMembership(!user.membership);
+      await refreshUser();
+      setMembershipMsg(
+        user.membership
+          ? "Membership cancelled."
+          : "Membership activated! Enjoy unlimited candidate recommendations."
+      );
+    } catch {
+      setMembershipMsg("Failed to update membership. Please try again.");
+    } finally {
+      setMembershipLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,6 +244,59 @@ export default function EmployerProfile() {
             )}
           </div>
         </form>
+      )}
+
+      {/* Membership section */}
+      {!loading && (
+        <div className="max-w-2xl mt-6">
+          <div className={`rounded-2xl border p-6 space-y-3 ${
+            user?.membership
+              ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800/50 dark:bg-yellow-900/10"
+              : "border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Membership
+                </h2>
+                <p className="text-base font-semibold text-gray-800 dark:text-white/90 mt-1">
+                  {user?.membership ? "Premium Member" : "Free Plan"}
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {user?.membership
+                    ? "You receive unlimited candidate recommendations for every job posting."
+                    : "Free accounts receive up to 10 candidate recommendations per job. Upgrade for unlimited results."}
+                </p>
+              </div>
+              {user?.membership && (
+                <span className="shrink-0 ml-4 rounded-full bg-yellow-100 dark:bg-yellow-900/30 px-3 py-1 text-xs font-semibold text-yellow-700 dark:text-yellow-400">
+                  Premium
+                </span>
+              )}
+            </div>
+
+            {membershipMsg && (
+              <p className="text-sm text-green-600 dark:text-green-400">{membershipMsg}</p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleMembershipToggle}
+              disabled={membershipLoading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+                user?.membership
+                  ? "border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  : "text-white bg-brand-500 hover:bg-brand-600"
+              }`}
+            >
+              {membershipLoading
+                ? "Updating…"
+                : user?.membership
+                ? "Cancel Membership"
+                : "Upgrade to Premium"}
+            </button>
+          </div>
+        </div>
       )}
     </>
   );

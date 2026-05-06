@@ -8,12 +8,13 @@ const userSchema = new mongoose.Schema(
     email:     { type: String, required: true, unique: true, lowercase: true, index: true },
     password:  { type: String, required: true },
 
-    // Role determines which workflow the user sees
     role: {
       type: String,
       enum: ["candidate", "employer"],
       required: true,
     },
+
+    membership: { type: Boolean, default: false },
 
     // Token invalidation — bump to force logout on all devices
     tokenVersion: { type: Number, default: 0 },
