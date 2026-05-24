@@ -1,8 +1,8 @@
 // frontend/src/pages/candidate/ResumeBuilder.tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
 import { useAuth } from "../../context/AuthContext";
-import { getMyResume, upsertResume, type ResumeData, type ResumeEducation, type ResumeWorkExp, type ResumeCertification, type ResumeProject, type ResumeTemplate } from "../../api/resumeApi";
+import { getMyResume, upsertResume, type ResumeData, type ResumeEducation, type ResumeWorkExp, type ResumeCertification, type ResumeProject } from "../../api/resumeApi";
 import { getMyCandidateProfile } from "../../api/candidateApi";
 import ResumePreview from "../../components/resume/ResumePreview";
 import ComboboxInput from "../../components/form/ComboboxInput";
@@ -111,12 +111,6 @@ const INSTITUTIONS = [
   "Victoria University of Wellington",
 ];
 
-const TEMPLATES: { id: ResumeTemplate; label: string; desc: string }[] = [
-  { id: "classic",  label: "Classic",  desc: "Traditional — navy header, serif font" },
-  { id: "modern",   label: "Modern",   desc: "Two-column — sidebar with skills" },
-  { id: "minimal",  label: "Minimal",  desc: "Clean monochrome — sans-serif" },
-];
-
 type Tab = "personal" | "summary" | "experience" | "education" | "skills" | "certifications" | "projects";
 const TABS: { id: Tab; label: string }[] = [
   { id: "personal",       label: "Personal" },
@@ -134,7 +128,7 @@ const emptyCert = (): ResumeCertification => ({ name: "", issuer: "", year: "" }
 const emptyProject = (): ResumeProject => ({ name: "", description: "", url: "" });
 
 const emptyResume = (): ResumeData => ({
-  template: "classic",
+  template: "modern",
   personalInfo: { fullName: "", email: "", phone: "", location: "", website: "", linkedin: "" },
   summary: "",
   education: [],
@@ -150,7 +144,6 @@ const labelCls = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-
 
 export default function ResumeBuilder() {
   const { user } = useAuth();
-  const previewRef = useRef<HTMLDivElement>(null);
 
   const [data, setData]           = useState<ResumeData>(emptyResume());
   const [loading, setLoading]     = useState(true);
@@ -159,7 +152,6 @@ export default function ResumeBuilder() {
   const [error, setError]         = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("personal");
   const [skillInput, setSkillInput] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -266,21 +258,6 @@ export default function ResumeBuilder() {
     }
   };
 
-  const handlePrint = () => {
-    const style = document.createElement("style");
-    style.id = "__resume-print-style";
-    style.innerHTML = `
-      @media print {
-        body > * { visibility: hidden !important; }
-        #__resume-preview-root, #__resume-preview-root * { visibility: visible !important; }
-        #__resume-preview-root { position: fixed; top: 0; left: 0; width: 100%; z-index: 99999; }
-      }
-    `;
-    document.head.appendChild(style);
-    window.print();
-    setTimeout(() => document.getElementById("__resume-print-style")?.remove(), 1000);
-  };
-
   if (loading) return <div className="text-center py-16 text-gray-400 dark:text-gray-500">Loading resume builder…</div>;
 
   return (
@@ -293,23 +270,6 @@ export default function ResumeBuilder() {
           <p className="text-gray-500 dark:text-gray-400 mt-1">Build your resume and attach it when applying for jobs.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => setShowPreview((v) => !v)}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-          >
-            {showPreview ? "Hide Preview" : "Preview"}
-          </button>
-          <button
-            type="button"
-            onClick={handlePrint}
-            className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-1.5"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download PDF
-          </button>
           <button
             type="button"
             onClick={handleSave}
@@ -327,32 +287,10 @@ export default function ResumeBuilder() {
         </div>
       )}
 
-      <div className={`grid gap-6 ${showPreview ? "grid-cols-1 xl:grid-cols-2" : "grid-cols-1 max-w-2xl"}`}>
+      <div className="grid gap-6 grid-cols-1 xl:grid-cols-2">
 
         {/* ── Editor ── */}
         <div className="flex flex-col gap-5">
-
-          {/* Template picker */}
-          <div className="rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900 p-5">
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-3">Template</p>
-            <div className="grid grid-cols-3 gap-2">
-              {TEMPLATES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setField("template", t.id)}
-                  className={`rounded-xl border p-3 text-left transition-all ${
-                    data.template === t.id
-                      ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 dark:border-brand-600"
-                      : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                  }`}
-                >
-                  <p className={`text-sm font-semibold mb-0.5 ${data.template === t.id ? "text-brand-600 dark:text-brand-400" : "text-gray-700 dark:text-gray-200"}`}>{t.label}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">{t.desc}</p>
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* Tab nav */}
           <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-xl p-1 flex-wrap">
@@ -604,21 +542,19 @@ export default function ResumeBuilder() {
         </div>
 
         {/* ── Preview ── */}
-        {showPreview && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Live Preview</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">A4 format — matches PDF output</p>
-            </div>
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-md">
-              <div
-                style={{ transform: "scale(0.72)", transformOrigin: "top left", width: "139%", height: 800, overflow: "hidden" }}
-              >
-                <ResumePreview data={data} forwardRef={previewRef} />
-              </div>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Live Preview</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">A4 format</p>
+          </div>
+          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-md">
+            <div
+              style={{ transform: "scale(0.72)", transformOrigin: "top left", width: "139%", height: 800, overflow: "hidden" }}
+            >
+              <ResumePreview data={data} />
             </div>
           </div>
-        )}
+        </div>
       </div>
     </>
   );
