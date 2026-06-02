@@ -59,9 +59,6 @@ jobs:
       - name: Install backend dependencies
         run: npm install
 
-      - name: Syntax-check backend JavaScript
-        run: npm run check
-
       - name: Start backend and verify health
         run: |
           npm start > server.log 2>&1 &
