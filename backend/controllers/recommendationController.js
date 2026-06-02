@@ -1,12 +1,13 @@
 // backend/controllers/recommendationController.js
 import CandidateProfile from "../models/CandidateProfile.js";
 import Job from "../models/Job.js";
+import User from "../models/User.js";
 
 const TOP_K = 10;
 
 /**
  * scoreJob — pure function, no side effects.
- * Computes a relevance score (0–4) and a human-readable list of matched reasons
+ * Computes a relevance score (0–6) and a human-readable list of matched reasons
  * for a single job against a candidate profile.
  *
  * Scoring criteria (each worth 1 point):
@@ -14,9 +15,8 @@ const TOP_K = 10;
  *   2. Education match — job's requiredEducation contains candidate's field or degree
  *   3. Experience      — candidate's yearsOfExperience >= job's yearsOfExperience
  *   4. Skills          — at least one skill overlaps (falls back to fieldOfStudy when no skills)
- *
- * Returns { score: number, reasons: string[] }
- * All string comparisons are case-insensitive.
+ *   5. Work mode       — candidate's preferredWorkingMode matches job's workMode
+ *   6. Location        — candidate's preferredLocation appears in job's location
  */
 function scoreJob(candidate, job) {
   let score = 0;
@@ -36,25 +36,25 @@ function scoreJob(candidate, job) {
   const jobEdu    = job.requiredEducation.toLowerCase();
   const jobSkills = job.requiredSkills.map((s) => s.toLowerCase().trim());
 
-  // 1. Field of study — one direction only: job description must mention the field
+  // 1. Field of study
   if (field && jobDesc.includes(field)) {
     score += 1;
     reasons.push("Field of study matched");
   }
 
-  // 2. Education match — one direction only: requiredEducation must contain field or degree
+  // 2. Education match
   if ((field && jobEdu.includes(field)) || (degree && jobEdu.includes(degree))) {
     score += 1;
     reasons.push("Education level matched");
   }
 
-  // 3. Experience match — candidate meets or exceeds required years
+  // 3. Experience match
   if (years >= job.yearsOfExperience) {
     score += 1;
     reasons.push("Experience requirement met");
   }
 
-  // 4. Skill match — array vs array, case-insensitive, partial overlap scores +1
+  // 4. Skill match
   if (candidateSkills.length > 0) {
     const hasOverlap = candidateSkills.some((cs) =>
       jobSkills.some((js) => js.includes(cs) || cs.includes(js))
@@ -65,55 +65,71 @@ function scoreJob(candidate, job) {
     }
   }
 
+  // 5. Work mode preference match
+  const preferredMode = (candidate.preferredWorkingMode || "").trim();
+  if (preferredMode && preferredMode === job.workMode) {
+    score += 1;
+    reasons.push("Work mode preference matched");
+  }
+
+  // 6. Location preference match
+  const preferredLoc = (candidate.preferredLocation || "").toLowerCase().trim();
+  if (preferredLoc && job.location.toLowerCase().includes(preferredLoc)) {
+    score += 1;
+    reasons.push("Location preference matched");
+  }
+
   return { score, reasons };
 }
 
 /**
  * GET /api/recommendations/candidates/:jobId
  * Returns the top-N candidates most relevant to the given job posting.
- * Each result includes matchScore (0–4) and matchReasons (string[]).
- * Candidates with a score of 0 are excluded.
- * Restricted to employer role (enforced at route level).
+ * Membership users get unlimited results; non-members get top 10.
  */
 export const recommendCandidatesForJob = async (req, res) => {
   try {
     const { jobId } = req.params;
 
-    // 1. Fetch the job by ID
-    const job = await Job.findById(jobId).select("-__v");
+    const [job, candidates, user] = await Promise.all([
+      Job.findById(jobId).select("-__v"),
+      CandidateProfile.find().select("-__v"),
+      User.findById(req.user.id).select("membership membershipExpiresAt"),
+    ]);
+
     if (!job) {
       return res.status(404).json({ error: "Job not found" });
     }
-
-    // 2. Fetch all candidate profiles
-    const candidates = await CandidateProfile.find().select("-__v");
     if (candidates.length === 0) {
       return res.status(200).json([]);
     }
 
-    // 3. Score every candidate against the job
+    const isMember = user?.membership === true && (!user.membershipExpiresAt || new Date(user.membershipExpiresAt) > new Date());
+
     const scored = candidates.map((candidate) => ({
       candidate,
       ...scoreJob(candidate, job),
     }));
 
-    // 4. Filter zero-score candidates, sort by score descending.
-    //    Most recently updated profile wins the tiebreaker.
-    const recommendations = scored
+    let recommendations = scored
       .filter(({ score }) => score > 0)
       .sort((a, b) =>
         b.score !== a.score
           ? b.score - a.score
           : new Date(b.candidate.updatedAt) - new Date(a.candidate.updatedAt)
-      )
-      .slice(0, TOP_K)
-      .map(({ candidate, score, reasons }) => ({
+      );
+
+    if (!isMember) {
+      recommendations = recommendations.slice(0, TOP_K);
+    }
+
+    return res.status(200).json(
+      recommendations.map(({ candidate, score, reasons }) => ({
         ...candidate.toObject(),
         matchScore: score,
         matchReasons: reasons,
-      }));
-
-    return res.status(200).json(recommendations);
+      }))
+    );
   } catch (err) {
     console.error("[recommendationController.recommendCandidatesForJob]", err);
     return res.status(500).json({ error: "An error occurred while generating candidate recommendations" });
@@ -123,49 +139,52 @@ export const recommendCandidatesForJob = async (req, res) => {
 /**
  * GET /api/recommendations
  * Returns the top-K jobs most relevant to the authenticated candidate.
- * Each result includes matchScore (0–4) and matchReasons (string[]).
- * Jobs with a score of 0 are excluded.
- * Requires a candidate profile to exist.
+ * Membership users get unlimited results; non-members get top 10.
  */
 export const recommendJobsForCandidate = async (req, res) => {
   try {
-    // 1. Fetch the candidate's profile
-    const candidate = await CandidateProfile.findOne({ user: req.user.id });
+    const [candidate, user] = await Promise.all([
+      CandidateProfile.findOne({ user: req.user.id }),
+      User.findById(req.user.id).select("membership membershipExpiresAt"),
+    ]);
+
     if (!candidate) {
       return res.status(404).json({
         error: "Candidate profile not found. Please create your profile to receive recommendations.",
       });
     }
 
-    // 2. Fetch all jobs
+    const isMember = user?.membership === true && (!user.membershipExpiresAt || new Date(user.membershipExpiresAt) > new Date());
+
     const jobs = await Job.find().select("-__v");
     if (jobs.length === 0) {
       return res.status(200).json([]);
     }
 
-    // 3. Score every job against the candidate profile
     const scored = jobs.map((job) => ({
       job,
       ...scoreJob(candidate, job),
     }));
 
-    // 4. Filter zero-score jobs, sort by score descending.
-    //    Newest job wins the tiebreaker.
-    const recommendations = scored
+    let recommendations = scored
       .filter(({ score }) => score > 0)
       .sort((a, b) =>
         b.score !== a.score
           ? b.score - a.score
           : new Date(b.job.createdAt) - new Date(a.job.createdAt)
-      )
-      .slice(0, TOP_K)
-      .map(({ job, score, reasons }) => ({
+      );
+
+    if (!isMember) {
+      recommendations = recommendations.slice(0, TOP_K);
+    }
+
+    return res.status(200).json(
+      recommendations.map(({ job, score, reasons }) => ({
         ...job.toObject(),
         matchScore: score,
         matchReasons: reasons,
-      }));
-
-    return res.status(200).json(recommendations);
+      }))
+    );
   } catch (err) {
     console.error("[recommendationController.recommendJobsForCandidate]", err);
     return res.status(500).json({ error: "An error occurred while generating recommendations" });

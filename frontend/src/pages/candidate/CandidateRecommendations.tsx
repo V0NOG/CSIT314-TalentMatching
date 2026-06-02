@@ -2,13 +2,25 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageMeta from "../../components/common/PageMeta";
+import { useAuth } from "../../context/AuthContext";
 import { getCandidateRecommendations, type JobRecommendation } from "../../api/recommendationsApi";
+import { getMyApplications } from "../../api/applicationsApi";
+import ApplyModal from "../../components/jobs/ApplyModal";
+
+const MAX_SCORE = 6;
 
 export default function CandidateRecommendations() {
+  const { user } = useAuth();
+  const isMember = user?.membership === true;
+
   const [jobs, setJobs] = useState<JobRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [noProfile, setNoProfile] = useState(false);
+
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
+  const [applyJobId, setApplyJobId] = useState<string | null>(null);
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
 
   useEffect(() => {
     getCandidateRecommendations()
@@ -24,7 +36,13 @@ export default function CandidateRecommendations() {
         }
       })
       .finally(() => setLoading(false));
+
+    getMyApplications()
+      .then((apps) => setAppliedIds(new Set(apps.map((a) => a.job._id))))
+      .catch(() => {});
   }, []);
+
+  const applyJob = jobs.find((j) => j._id === applyJobId);
 
   return (
     <>
@@ -35,19 +53,46 @@ export default function CandidateRecommendations() {
         <p className="text-gray-500 dark:text-gray-400 mt-1">
           {!loading && !noProfile && jobs.length > 0
             ? `${jobs.length} job${jobs.length !== 1 ? "s" : ""} matched your profile — sorted by best fit.`
+            : isMember
+            ? "All job matches ranked by how well they fit your profile."
             : "Your top 10 job matches, ranked by how well they fit your profile."}
         </p>
       </div>
+
+      {/* Membership status banner */}
+      {!loading && (
+        <div className={`mb-6 rounded-xl border px-5 py-3 flex items-center justify-between gap-4 ${
+          isMember
+            ? "border-yellow-200 bg-yellow-50 dark:border-yellow-800/50 dark:bg-yellow-900/10"
+            : "border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/40"
+        }`}>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            {isMember
+              ? "Premium member — showing all matching jobs with no limit."
+              : "Free plan — showing top 10 matches. Upgrade to Premium for unlimited results."}
+          </p>
+          {!isMember && (
+            <Link
+              to="/candidate/profile"
+              className="shrink-0 text-xs font-medium text-brand-500 hover:text-brand-600"
+            >
+              Upgrade →
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Scoring explanation */}
       <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 dark:border-blue-900/50 dark:bg-blue-900/10 px-5 py-4">
         <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">How recommendations work</p>
         <p className="text-xs text-blue-600 dark:text-blue-400">
-          Each job is scored out of 4 based on how closely it matches your profile across four criteria:
+          Each job is scored out of {MAX_SCORE} based on how closely it matches your profile across six criteria:
           <span className="font-medium"> field of study</span>,
           <span className="font-medium"> education level</span>,
-          <span className="font-medium"> years of experience</span>, and
-          <span className="font-medium"> skills</span>.
+          <span className="font-medium"> years of experience</span>,
+          <span className="font-medium"> skills</span>,
+          <span className="font-medium"> work mode preference</span>, and
+          <span className="font-medium"> location preference</span>.
           Jobs with higher scores appear first. Keep your profile complete for better matches.
         </p>
       </div>
@@ -81,7 +126,7 @@ export default function CandidateRecommendations() {
         <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-12 text-center">
           <p className="text-gray-600 dark:text-gray-400 mb-1 font-medium">No matching jobs found</p>
           <p className="text-sm text-gray-500 dark:text-gray-500 mb-4">
-            Try completing more of your profile — add your field of study and education details for the best results.
+            Try completing more of your profile — add skills, field of study, and your work mode preference for best results.
           </p>
           <Link
             to="/candidate/profile"
@@ -95,17 +140,45 @@ export default function CandidateRecommendations() {
       {!loading && !error && !noProfile && jobs.length > 0 && (
         <div className="flex flex-col gap-4">
           {jobs.map((job) => (
-            <JobCard key={job._id} job={job} />
+            <JobCard
+              key={job._id}
+              job={job}
+              isApplied={appliedIds.has(job._id)}
+              isHighlighted={highlightedId === job._id}
+              onApply={() => {
+                setHighlightedId(job._id);
+                setApplyJobId(job._id);
+                setTimeout(() => setHighlightedId(null), 900);
+              }}
+            />
           ))}
         </div>
+      )}
+
+      {applyJobId && applyJob && (
+        <ApplyModal
+          jobId={applyJobId}
+          jobTitle={applyJob.title}
+          jobLocation={applyJob.location}
+          jobWorkMode={applyJob.workMode}
+          onClose={() => setApplyJobId(null)}
+          onSuccess={(jobId) => {
+            setAppliedIds((prev) => new Set([...prev, jobId]));
+            setApplyJobId(null);
+          }}
+        />
       )}
     </>
   );
 }
 
-function JobCard({ job }: { job: JobRecommendation }) {
+function JobCard({ job, isApplied, isHighlighted, onApply }: { job: JobRecommendation; isApplied: boolean; isHighlighted: boolean; onApply: () => void }) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+    <div className={`rounded-2xl border bg-white p-5 dark:bg-gray-900 transition-all duration-300 ${
+      isHighlighted
+        ? "border-brand-400 dark:border-brand-500 ring-2 ring-brand-300 dark:ring-brand-700 shadow-md scale-[1.005]"
+        : "border-gray-200 dark:border-gray-800"
+    }`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-semibold text-gray-800 dark:text-white/90 truncate">{job.title}</h2>
@@ -129,7 +202,6 @@ function JobCard({ job }: { job: JobRecommendation }) {
         )}
       </div>
 
-      {/* Why this matched */}
       {job.matchReasons && job.matchReasons.length > 0 && (
         <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Why this matched</p>
@@ -145,16 +217,31 @@ function JobCard({ job }: { job: JobRecommendation }) {
           </div>
         </div>
       )}
+
+      <div className="mt-3 flex items-center justify-end">
+        {isApplied ? (
+          <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-full px-3 py-1">
+            Applied
+          </span>
+        ) : (
+          <button
+            onClick={onApply}
+            className="text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-lg px-4 py-1.5"
+          >
+            Apply
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 function MatchBadge({ score }: { score: number }) {
-  const pct = Math.round((score / 4) * 100);
+  const pct = Math.round((score / MAX_SCORE) * 100);
   const colour =
-    score >= 3
+    score >= 5
       ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-      : score >= 2
+      : score >= 4
       ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
       : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
 

@@ -23,9 +23,10 @@ type NavItem = {
 // Items shown to candidates (job seekers)
 const candidateNavItems: NavItem[] = [
   { icon: <GridIcon />,       name: "Dashboard",        path: "/" },
-  { icon: <UserCircleIcon />, name: "My Profile",       path: "/candidate/profile" },
   { icon: <ListIcon />,       name: "Browse Jobs",      path: "/jobs" },
   { icon: <PieChartIcon />,   name: "Recommended Jobs", path: "/candidate/recommendations" },
+  { icon: <PageIcon />,       name: "Resume Builder",   path: "/candidate/resume" },
+  { icon: <ListIcon />,       name: "My Applications",  path: "/candidate/applications" },
 ];
 
 // Items shown to employers
@@ -38,6 +39,7 @@ const employerNavItems: NavItem[] = [
     subItems: [
       { name: "All Postings",  path: "/employer/jobs" },
       { name: "Post a Job",    path: "/employer/jobs/new" },
+      { name: "Applications",  path: "/employer/applications" },
     ],
   },
   { icon: <ListIcon />,       name: "Browse Candidates",      path: "/candidates" },
@@ -105,11 +107,11 @@ const AppSidebar: React.FC = () => {
         <Link to="/">
           {sidebarExpanded ? (
             <>
-              <img className="dark:hidden" src="/images/logo/logo.svg" alt="Logo" width={150} height={40} />
-              <img className="hidden dark:block" src="/images/logo/logo-dark.svg" alt="Logo" width={150} height={40} />
+              <img className="dark:hidden" src="/images/logo/GongTalents_Logo_light.svg" alt="Logo" width={150} />
+              <img className="hidden dark:block" src="/images/logo/GongTalents_Logo.svg" alt="Logo" width={150} />
             </>
           ) : (
-            <img src="/images/logo/logo-icon.svg" alt="Logo" width={32} height={32} />
+            <img src="/images/logo/GongTalents_FavIcon.svg" alt="Logo" width={32} height={32} />
           )}
         </Link>
       </div>

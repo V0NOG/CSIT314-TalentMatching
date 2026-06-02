@@ -16,6 +16,8 @@ import employerRoutes  from "./routes/employer.js";
 import jobRoutes             from "./routes/jobs.js";
 import recommendationRoutes  from "./routes/recommendations.js";
 import candidatesRoutes      from "./routes/candidates.js";
+import applicationRoutes from "./routes/applications.js";
+import resumeRoutes      from "./routes/resume.js";
 
 // --- Fail fast if critical environment variables are missing ---
 const REQUIRED_ENV = ["MONGO_URI", "JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"];
@@ -70,6 +72,8 @@ app.use("/api/employer",  employerRoutes);
 app.use("/api/jobs",            jobRoutes);
 app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/candidates",      candidatesRoutes);
+app.use("/api/applications",    applicationRoutes);
+app.use("/api/resume",          resumeRoutes);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

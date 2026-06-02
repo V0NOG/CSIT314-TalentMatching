@@ -1,12 +1,20 @@
 // backend/controllers/candidateController.js
 import CandidateProfile from "../models/CandidateProfile.js";
 
+const ALLOWED_FIELDS = [
+  "fullName",
+  "phone",
+  "education",
+  "yearsOfExperience",
+  "skills",
+  "workExperience",
+  "preferredWorkingMode",
+  "preferredLocation",
+];
+
 /**
  * POST /api/candidate/profile
  * Creates a new candidate profile for the authenticated user.
- * Returns 400 if required fields are missing.
- * Returns 409 if a profile already exists.
- * Returns 201 on success.
  */
 export const createProfile = async (req, res) => {
   try {
@@ -27,11 +35,14 @@ export const createProfile = async (req, res) => {
       return res.status(409).json({ error: "A profile already exists for this account. Use PUT to update it." });
     }
 
-    const profile = await CandidateProfile.create({
-      ...req.body,
-      user: req.user.id,
-    });
+    const data = {};
+    for (const field of ALLOWED_FIELDS) {
+      if (req.body[field] !== undefined) {
+        data[field] = req.body[field];
+      }
+    }
 
+    const profile = await CandidateProfile.create({ ...data, user: req.user.id });
     return res.status(201).json(profile);
   } catch (err) {
     console.error("[candidateController.createProfile]", err);
@@ -42,7 +53,6 @@ export const createProfile = async (req, res) => {
 /**
  * GET /api/candidate/profile
  * Returns the authenticated candidate's profile.
- * Returns 404 if no profile has been created yet.
  */
 export const getMyProfile = async (req, res) => {
   try {
@@ -62,10 +72,6 @@ export const getMyProfile = async (req, res) => {
 /**
  * PUT /api/candidate/profile
  * Updates the authenticated candidate's existing profile.
- * Only whitelisted fields are applied — user, _id, and any unknown fields are ignored.
- * Returns 400 if the request body is empty.
- * Returns 404 if no profile exists yet.
- * Returns 200 on success.
  */
 export const updateProfile = async (req, res) => {
   try {
@@ -73,7 +79,6 @@ export const updateProfile = async (req, res) => {
       return res.status(400).json({ error: "No fields provided. Please include at least one field to update." });
     }
 
-    const ALLOWED_FIELDS = ["fullName", "phone", "education", "yearsOfExperience"];
     const updates = {};
     for (const field of ALLOWED_FIELDS) {
       if (req.body[field] !== undefined) {
@@ -82,7 +87,9 @@ export const updateProfile = async (req, res) => {
     }
 
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: "No valid fields provided. Allowed fields: fullName, phone, education, yearsOfExperience." });
+      return res.status(400).json({
+        error: `No valid fields provided. Allowed fields: ${ALLOWED_FIELDS.join(", ")}.`,
+      });
     }
 
     const profile = await CandidateProfile.findOneAndUpdate(

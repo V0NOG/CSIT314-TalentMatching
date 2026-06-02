@@ -7,6 +7,8 @@ export interface AuthUser {
   lastName: string;
   email: string;
   role: "candidate" | "employer";
+  membership: boolean;
+  membershipExpiresAt: string | null;
   createdAt: string;
 }
 
