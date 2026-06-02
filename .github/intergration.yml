@@ -1,0 +1,126 @@
+name: Intergration
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+  push:
+    branches:
+      - main
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-intergration:
+    name: Backend Intergration with MongoDB
+    runs-on: ubuntu-latest
+    
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ ping: 1 })' || mongosh --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    defaults:
+      run:
+        working-directory: backend
+
+    env:
+      NODE_ENV: test
+      PORT: 5050
+      CORS_ORIGINS: http://localhost:5173,http://localhost:4173
+      MONGO_URI: mongodb://127.0.0.1:27017/talent_matching_ci
+      JWT_ACCESS_SECRET: do_not_use_in_production
+      JWT_REFRESH_SECRET: do_not_use_in_production
+      COOKIE_SECURE: "false"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install backend dependencies
+        run: npm install
+
+      - name: Syntax-check backend JavaScript
+        run: npm run check
+
+      - name: Start backend and verify health
+        run: |
+          npm start > server.log 2>&1 &
+          SERVER_PID=$!
+
+          for attempt in {1..45}; do
+            if curl -fsS http://localhost:5050/ > /tmp/backend-health.json; then
+              echo "Backend health check passed"
+              cat /tmp/backend-health.json
+              kill "$SERVER_PID"
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Backend failed to become healthy"
+          cat server.log
+          kill "$SERVER_PID" || true
+          exit 1
+
+    frontend-intergration:
+    name: Frontend Intergration
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build frontend
+        env:
+          CONFIGURED_API_URL: ${{ vars.VITE_API_URL }}
+        run: |
+          REPO_NAME="${GITHUB_REPOSITORY#*/}"
+          OWNER_NAME="${GITHUB_REPOSITORY_OWNER}"
+
+          if [ "$REPO_NAME" = "$OWNER_NAME.github.io" ]; then
+            BASE_PATH="/"
+          else
+            BASE_PATH="/$REPO_NAME/"
+          fi
+
+          export VITE_API_URL="${CONFIGURED_API_URL:-http://localhost:5050}"
+
+          echo "Building frontend with Vite base path: $BASE_PATH"
+          echo "Frontend API target: $VITE_API_URL"
+
+          npm run build -- --base="$BASE_PATH"
