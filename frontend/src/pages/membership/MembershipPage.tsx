@@ -1,6 +1,6 @@
 // frontend/src/pages/membership/MembershipPage.tsx
 import { useState, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import PageMeta from "../../components/common/PageMeta";
 import { useAuth } from "../../context/AuthContext";
 import { updateMembership } from "../../api/userApi";
@@ -75,7 +75,6 @@ type Stage = "form" | "processing" | "success";
 
 export default function MembershipPage() {
   const { user, refreshUser, isCandidate } = useAuth();
-  const navigate = useNavigate();
 
   const profilePath = isCandidate ? "/candidate/profile" : "/employer/profile";
 
