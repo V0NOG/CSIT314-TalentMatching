@@ -82,7 +82,7 @@ jobs:
           kill "$SERVER_PID" || true
           exit 1
 
-    frontend-intergration:
+  frontend-intergration:
     name: Frontend Intergration
     runs-on: ubuntu-latest
 
