@@ -124,4 +124,4 @@ jobs:
           echo "Building frontend with Vite base path: $BASE_PATH"
           echo "Frontend API target: $VITE_API_URL"
 
-          npm run build -- --base="$BASE_PATH"
+          npm run dev -- --base="$BASE_PATH"
