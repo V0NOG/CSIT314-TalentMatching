@@ -3,12 +3,10 @@ name: Intergration
 on:
   pull_request:
     branches:
-      - main
-      - dev
+      - phase-1-stable
   push:
     branches:
-      - main
-      - dev
+      - phase-1-stable
   workflow_dispatch:
 
 permissions:
