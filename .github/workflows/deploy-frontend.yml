@@ -21,6 +21,7 @@ jobs:
       run:
         working-directory: frontend
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
       VITE_API_URL: ${{ vars.VITE_API_URL }}
       VITE_BASE_PATH: /${{ github.event.repository.name }}/
     steps:
@@ -30,10 +31,16 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Check backend URL
-        run: test -n "$VITE_API_URL"
+        run: |
+          if [ -z "$VITE_API_URL" ]; then
+            echo "VITE_API_URL is missing."
+            echo "Add it in GitHub: Settings > Secrets and variables > Actions > Variables > New repository variable."
+            echo "Use the backend origin only, for example: https://your-backend-host.example.com"
+            exit 1
+          fi
 
       - name: Install dependencies
         run: npm install
