@@ -1,5 +1,6 @@
 // frontend/src/components/jobs/ApplyModal.tsx
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { applyForJob } from "../../api/applicationsApi";
 import { getMyResume } from "../../api/resumeApi";
 
@@ -74,7 +75,7 @@ export default function ApplyModal({ jobId, jobTitle, jobLocation, jobWorkMode, 
           ) : (
             <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-700 px-4 py-3 text-sm text-gray-400 dark:text-gray-500">
               No resume saved yet.{" "}
-              <a href="/candidate/resume" className="text-brand-500 hover:underline">Build one</a>{" "}
+              <Link to="/candidate/resume" className="text-brand-500 hover:underline">Build one</Link>{" "}
               to attach it to applications.
             </div>
           )}

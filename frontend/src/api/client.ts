@@ -3,6 +3,8 @@
 // All API modules import from here — never raw axios with a hardcoded URL.
 import axios from "axios";
 
+const appBasePath = import.meta.env.BASE_URL;
+
 const client = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:5050",
   withCredentials: true,
@@ -66,7 +68,7 @@ client.interceptors.response.use(
     } catch {
       flushQueue(null);
       localStorage.removeItem("token");
-      window.location.href = "/signin";
+      window.location.href = `${appBasePath}signin`;
       return Promise.reject(error);
     } finally {
       refreshing = false;

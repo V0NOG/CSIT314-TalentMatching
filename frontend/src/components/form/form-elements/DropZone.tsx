@@ -2,8 +2,8 @@
 import ComponentCard from "../../common/ComponentCard";
 import { useDropzone } from "react-dropzone";
 import { useState } from "react";
-import axios from "axios";
 import Alert from "../../ui/alert/Alert";
+import client from "../../../api/client";
 
 interface DropzoneProps {
   onUploadSuccess: () => void;
@@ -26,13 +26,10 @@ const DropzoneComponent: React.FC<DropzoneProps> = ({ onUploadSuccess }) => {
     const formData = new FormData();
     formData.append("file", file);
 
-    const token = localStorage.getItem("userToken");
-
     try {
-      const res = await axios.post("http://localhost:5050/api/progress-reports/upload", formData, {
+      const res = await client.post("/api/progress-reports/upload", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
         },
         onUploadProgress: (progressEvent) => {
           const percent = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1));
