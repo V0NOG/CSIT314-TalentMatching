@@ -65,6 +65,11 @@ function safeUser(user) {
   };
 }
 
+function zodErrorMessage(err) {
+  const issues = err.issues || err.errors || [];
+  return issues.map((issue) => issue.message).join(", ") || "Invalid request";
+}
+
 // ---------- Controllers ----------
 
 export const register = async (req, res) => {
@@ -91,7 +96,7 @@ export const register = async (req, res) => {
     });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: err.errors.map((e) => e.message).join(", ") });
+      return res.status(400).json({ error: zodErrorMessage(err) });
     }
     if (err?.code === "NO_JWT_SECRET") {
       return res.status(500).json({ error: err.message });
@@ -122,7 +127,7 @@ export const login = async (req, res) => {
     });
   } catch (err) {
     if (err instanceof z.ZodError) {
-      return res.status(400).json({ error: err.errors.map((e) => e.message).join(", ") });
+      return res.status(400).json({ error: zodErrorMessage(err) });
     }
     if (err?.code === "NO_JWT_SECRET") {
       return res.status(500).json({ error: err.message });
