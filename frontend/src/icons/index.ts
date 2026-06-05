@@ -55,14 +55,12 @@ import { ReactComponent as ErrorHexaIcon } from "./info-hexa.svg?react";
 import { ReactComponent as BoxTapped } from "./box-tapped.svg?react";
 import { ReactComponent as TruckDelivery } from "./truck-delivery.svg?react";
 import { ReactComponent as BoxMoving } from "./box-moving.svg?react";
-import { ReactComponent as AiIcon } from "./ai-icon.svg?react";
 import { ReactComponent as CartIcon } from "./cart-icon.svg?react";
 import { ReactComponent as CallIcon } from "./call-icon.svg?react";
 
 export {
   CallIcon,
   CartIcon,
-  AiIcon,
   BoxMoving,
   TruckDelivery,
   BoxTapped,
